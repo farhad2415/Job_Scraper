@@ -1,0 +1,8 @@
+# Ignore virtual environment
+myvenv/
+myvenv/*
+
+
+
+# Path: .gitignore
+# Ignore all files in the directory

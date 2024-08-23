@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Data Scraping{% endblock %}
+
+{% block searchcontent %}
+
+<div class="container mt-5">
+    <h2>Select a URL to Scrape</h2>
+    <form method="POST">
+        {% csrf_token %}
+        <div class="form-group">
+            {% comment %} <label for="url">URL</label>
+            <input type="text" class="form-control" id="url" name="url" placeholder="Enter URL"> {% endcomment %}
+            
+
+            <div class="row">
+                <div class="col-md-10">
+                    <label for="url">Select URL</label>
+                    <select required class="form-control" id="url" name="url">
+                        <option value=""></option>
+                        {% for urls in all_available_urls %}
+                        <option value="{{ urls.url }}">{{ urls.url }}</option>
+                        {% endfor %}
+                        <option value="https://www.olx.ro/oferte/q-%C3%AEngrijitor-de-animale/">OLX</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="max_pages">Max Pages</label>
+                    <select required class="form-control" id="max_pages" name="max_pages">
+                        <option value="">-----</option>
+                        <option value="1">1</option>
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="30">30</option>
+                        <option value="40">40</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+</div>
+
+{% endblock %}

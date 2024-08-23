@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+{% block content %}
+
+<div class="jumbotron">
+    <h1 class="display-4">Welcome to Job Data Scrapping</h1>
+    <p class="lead">This is a simple Django web application that scrapes job data from a job listing website.</p>
+    <hr class="my-4">
+    <p>Click the button below to start scraping job data.</p>
+    <a class="btn btn-primary btn-lg" href="/start_scraping/" role="button">Start Scraping</a>
+
+{% endblock %}
