@@ -19,6 +19,8 @@
                 <th>Website</th>
                 <th>No of Vacancies</th>
                 <th>Salary</th>
+                <th>Type</th>
+                <th>Location</th>
             </tr>
         </thead>
         <tbody>
@@ -31,6 +33,8 @@
                 <td>{% if job.website %}{{ job.website }}{% else %}Not found{% endif %}</td>
                 <td>{% if job.vacancies %}{{ job.vacancies }}{% else %}Not found{% endif %}</td>
                 <td>{% if job.salary %}{{ job.salary }}{% else %}Not found{% endif %}</td>
+                <td>{% if job.type %}{{ job.type }}{% else %}Not found{% endif %}</td>
+                <td>{% if job.location %}{{ job.location }}{% else %}Not found{% endif %}</td>
             </tr>
             {% empty %}
             <tr>
