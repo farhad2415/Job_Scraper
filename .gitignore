@@ -3,6 +3,6 @@ myvenv/
 myvenv/*
 
 
-
-# Path: .gitignore
-# Ignore all files in the directory
+# ignore python cache
+__pycache__/
+*.pyc

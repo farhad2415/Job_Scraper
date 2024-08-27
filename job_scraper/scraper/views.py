@@ -9,19 +9,22 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.core.paginator import Paginator
 from django.contrib import messages
-from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.common.exceptions import WebDriverException
+from webdriver_manager.chrome import ChromeDriverManager
+import time
 
 def scrape_job_details(url, max_pages):
     base_url = url.strip()
-    service = Service('/usr/bin/chromedriver')
+    # service = Service('/usr/bin/chromedriver')
+    service1 = Service(ChromeDriverManager().install())
     options = Options()
     options.add_argument('--headless') 
-    driver = webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome(service=service1, options=options)
 
     data = {
         "is_success": False,
         'url': url,
-        'total_jobs': 0,
+        'total_jobs_found': 0,
         'total_skipped_jobs': 0
     }
     total_skipped_jobs = 0
@@ -51,11 +54,12 @@ def scrape_job_details(url, max_pages):
                         data = {
                         "is_success": True,
                         'url': url,
-                        'total_jobs': len(job_grid_elements),
+                        'total_jobs_found': len(job_grid_elements),
                         'total_skipped_jobs': total_skipped_jobs
                         }
                 else:
                     print(f"No job elements found on page {page_number}.")
+            time.sleep(15)
             return data
         # if an error occurs while permission denied
         except Exception as e:
@@ -103,7 +107,6 @@ def scrape_job_details(url, max_pages):
                         scraped_data = Job(position=job_position, salary=job_salary, location=job_location, job_type=job_type)
                         scraped_data.save()
                         data_processed = True  # Set flag to True if data is processed
-                        total_jobs_found += 1
                     # Show a message if any data was processed
                     if data_processed:
                         print("Data has been processed and saved.")
@@ -112,7 +115,7 @@ def scrape_job_details(url, max_pages):
             data = {
                 "is_success": True,
                 'url': url,
-                'total_jobs_found': total_jobs_found,
+                'total_jobs_found': len(job_element),
                 'total_skipped_jobs': total_skipped_jobs
             }
             return data     
