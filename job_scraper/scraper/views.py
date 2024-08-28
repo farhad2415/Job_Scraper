@@ -41,13 +41,16 @@ def scrape_job_details(url, max_pages):
                 job_grid_elements = driver.find_elements(By.CLASS_NAME, 'mobile-job-grid')
                 if job_grid_elements:
                     for job_element in job_grid_elements:
-                        position = job_element.find_element(By.TAG_NAME, 'h2').text
-                        company = job_element.find_element(By.CLASS_NAME, 'job-sub-title').text
-                        print(f"Position: {position}")
+                        position = job_element.find_element(By.TAG_NAME, 'h2').text if job_element.find_element(By.TAG_NAME, 'h2') else "Position not found"
+                        company = job_element.find_element(By.CLASS_NAME, 'job-sub-title').text if job_element.find_element(By.CLASS_NAME, 'job-sub-title') else "Company not found"
+                        job_salary = job_element.find_element(By.CLASS_NAME, 'job-sub-details-title')[0].text if job_element.find_element(By.CLASS_NAME, 'job-sub-details-title')[0] else "Salary not found"
+                        job_type = job_element.find_element(By.CLASS_NAME, 'job-sub-details-title')[1].text if job_element.find_element(By.CLASS_NAME, 'job-sub-details-title')[1] else "Type not found"
+                        experience = job_element.find_element(By.CLASS_NAME, 'job-sub-details-title')[2].text if job_element.find_element(By.CLASS_NAME, 'job-sub-details-title')[2] else "Experience not found"
+                        print(f"Position: {position}, Company: {company}, Salary: {job_salary}, Type: {job_type}, Experience: {experience}")
                         # scraped_data = Job(position=position, company=company)
                         # scraped_data.save()
-                        if not Job.objects.filter(position=position, company=company).exists():
-                            scraped_data = Job(position=position, company=company)
+                        if not Job.objects.filter(position=position, company=company, salary=job_salary).exists():
+                            scraped_data = Job(position=position, company=company, salary=job_salary)
                             scraped_data.save()
                         else:
                             total_skipped_jobs += 1
@@ -97,9 +100,8 @@ def scrape_job_details(url, max_pages):
                         continue
                     
                     job_position = content.find("h6").get_text(strip=True) if content.find("h6") else "Position not found"
-                    job_salary = content.find("p").get_text(strip=True) if content.find("p") else "Salary not found"
+                    job_salary = content.find_all("p")[0].get_text(strip=True) if content.find("p") else "Salary not found"
                     job_location = content.find_all("p")[1].get_text(strip=True) if len(content.find_all("p")) > 1 else "Location not found"
-                    job_type = content.find_all("p")[2].get_text(strip=True) if len(content.find_all("p")) > 2 else "Type not found"
                     job_type = content.find_all("p")[2].get_text(strip=True) if len(content.find_all("p")) > 2 else "Type not found"
                         
 
@@ -164,3 +166,13 @@ def scrape_view(request):
 
 def home(request):
     return render(request, 'home.html')
+
+import pandas as pd
+from django.http import HttpResponse
+def export_to_excel(request):
+    data = Job.objects.all()
+    df = pd.DataFrame(list(data.values()))
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="jobs.xlsx"'
+    df.to_excel(response, index=False, engine='openpyxl')
+    return response
