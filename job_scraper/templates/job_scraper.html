@@ -14,27 +14,49 @@
             <tr>
                 <th>Company</th>
                 <th>Position</th>
-                <th>Phone</th>
-                <th>Email</th>
-                <th>Website</th>
-                <th>No of Vacancies</th>
-                <th>Salary</th>
-                <th>Type</th>
+                <th>Posting Date</th>
                 <th>Location</th>
+                <th>Salary</th>
+                <th>Job Type</th>
+                <th>Phone Number</th>
+                <th>Job Link</th>
+                <th>Description</th>
+                <th>Source</th>
             </tr>
         </thead>
         <tbody>
             {% for job in page_obj %}
             <tr>
-                <td>{% if job.company %}{{ job.company }}{% else %}Not found{% endif %}</td>
-                <td>{% if job.position %}{{ job.position }}{% else %}Not found{% endif %}</td>
-                <td>{% if job.phone %}{{ job.phone }}{% else %}Not found{% endif %}</td>
-                <td>{% if job.email %}{{ job.email }}{% else %}Not found{% endif %}</td>
-                <td>{% if job.website %}{{ job.website }}{% else %}Not found{% endif %}</td>
-                <td>{% if job.vacancies %}{{ job.vacancies }}{% else %}Not found{% endif %}</td>
-                <td>{% if job.salary %}{{ job.salary }}{% else %}Not found{% endif %}</td>
-                <td>{% if job.type %}{{ job.type }}{% else %}Not found{% endif %}</td>
-                <td>{% if job.location %}{{ job.location }}{% else %}Not found{% endif %}</td>
+                <td>{{ job.company }}</td>
+                <td>{{ job.position }}</td>
+                <td>{{ job.job_posted }}</td>
+                <td>{{ job.location }}</td>
+                <td>
+                    {% if not job.salary %}
+                        <form method="POST" action="{% url 'update_salary' job.id %}">
+                            {% csrf_token %}
+                            <input type="text" name="salary" value="{{ job.salary }}">
+                            <button class="btn-primary rounded" type="submit">Update</button>
+                        </form>
+                    {% else %}
+                        {{ job.salary }}  <!-- If phone number exists, just display it -->
+                    {% endif %}
+                </td>
+                <td>{{ job.job_type }}</td>
+                <td>
+                    {% if not job.phone_number %}
+                        <form method="POST" action="{% url 'update_phone_number' job.id %}">
+                            {% csrf_token %}
+                            <input type="text" name="phone_number" value="{{ job.phone_number }}">
+                            <button class="btn-primary rounded" type="submit">Update</button>
+                        </form>
+                    {% else %}
+                        {{ job.phone_number }}  <!-- If phone number exists, just display it -->
+                    {% endif %}
+                </td>
+                <td><a href="{{ job.job_link }}" target="_blank">Link</a></td>
+                <td>{{ job.description }}</td>
+                <td>{{ job.source }}</td>
             </tr>
             {% empty %}
             <tr>
