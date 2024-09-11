@@ -6,3 +6,9 @@ myvenv/*
 # ignore python cache
 __pycache__/
 *.pyc
+
+
+# skip static files
+static/
+
+# ignore pycache
