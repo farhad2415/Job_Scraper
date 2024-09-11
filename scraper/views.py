@@ -221,7 +221,9 @@ def scrape_job_details(url, max_pages):
                 print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
-                    
+
+
+                 
 def scrape_job(request):
     if request.method == 'POST':
         url = request.POST.get('url')
@@ -254,8 +256,11 @@ def scrape_view(request):
 
     return render(request, 'job_scraper.html', {'page_obj': page_obj})
 
-from django.shortcuts import redirect
 
+
+
+from django.shortcuts import redirect
+# Update Phone Number When Geeting Null
 def update_phone_number(request, job_id):
     if request.method == "POST":
         phone_number = request.POST.get('phone_number')
@@ -264,7 +269,9 @@ def update_phone_number(request, job_id):
         job.save()
         messages.success(request, "Phone number updated successfully!") 
         return redirect(request.META['HTTP_REFERER'])
-    
+
+
+# Update Salary Button   
 def update_salary(request, job_id):
     if request.method == "POST":
         salary = request.POST.get('salary')
@@ -274,9 +281,13 @@ def update_salary(request, job_id):
         messages.success(request, "Salary updated successfully!") 
         return redirect(request.META['HTTP_REFERER'])
 
+
+# Defualt Home Page
 def home(request):
     return render(request, 'home.html')
 
+
+# export_to_excel function to export job data to excel file
 import pandas as pd
 from django.http import HttpResponse
 def export_to_excel(request):

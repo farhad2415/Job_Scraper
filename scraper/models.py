@@ -1,27 +1,19 @@
-from django.db import models
+from django.db import models 
 
-class ScrapedData(models.Model):
-    url = models.URLField(max_length=200)
-    html_content = models.TextField()
-    company = models.CharField(max_length=255, blank=True, null=True)
+class Category(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.CharField(max_length=100, blank=True, null=True)
+    sub_category = models.ForeignKey('SubCategory', on_delete=models.CASCADE, blank=True, null=True)
+    def __str__(self):
+        return self.name
+    
+
+class SubCategory(models.Model):
+    name = models.CharField(max_length=255)
 
     def __str__(self):
-        return self.html_content + " - " + self.company
-    
+        return self.name    
 
-# class Industry(models.Model):
-#     name = models.CharField(max_length=255)
-
-#     def __str__(self):
-#         return self.name
-
-# class Category(models.Model):
-#     name = models.CharField(max_length=255)
-#     industry = models.ForeignKey(Industry, on_delete=models.CASCADE)
-
-#     def __str__(self):
-#         return self.name
-    
 class AvilableUrl(models.Model):
     url = models.URLField(max_length=200)
     
