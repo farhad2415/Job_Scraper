@@ -9,6 +9,7 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from selenium.common.exceptions import WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options as chrome_options
 def scrape_job_details(url, max_pages, category_slug):
     base_url = url.strip()
     category_slug = category_slug.strip()
@@ -19,6 +20,9 @@ def scrape_job_details(url, max_pages, category_slug):
     # driver = webdriver.Chrome(service=service1, options=options)
     options = Options()
     options.add_argument('--window-size=1920,1080')
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--disable-dev-shm-usage')
     driver = webdriver.Chrome(service=Service(
         ChromeDriverManager().install()), options=options)
 
