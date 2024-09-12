@@ -13,10 +13,14 @@ def scrape_job_details(url, max_pages, category_slug):
     base_url = url.strip()
     category_slug = category_slug.strip()
     # service = Service('/usr/bin/chromedriver')
-    service1 = Service(ChromeDriverManager().install())
+    # service1 = Service(ChromeDriverManager().install())
+    # options = Options()
+    # options.add_argument('--headless') 
+    # driver = webdriver.Chrome(service=service1, options=options)
     options = Options()
-    options.add_argument('--headless') 
-    driver = webdriver.Chrome(service=service1, options=options)
+    options.add_argument('--window-size=1920,1080')
+    driver = webdriver.Chrome(service=Service(
+        ChromeDriverManager().install()), options=options)
 
     data = {
         "is_success": False,
