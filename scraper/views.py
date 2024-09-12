@@ -12,11 +12,13 @@ from webdriver_manager.chrome import ChromeDriverManager
 def scrape_job_details(url, max_pages, category_slug):
     base_url = url.strip()
     category_slug = category_slug.strip()
-    service = Service('/usr/bin/google-chrome')
-    # service1 = Service(ChromeDriverManager().install())
+    # service = Service('/usr/bin/google-chrome')
+    service1 = Service(ChromeDriverManager().install())
     options = Options()
-    options.add_argument('--headless') 
-    driver = webdriver.Chrome(service=service, options=options)
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    driver = webdriver.Chrome(service=service1, options=options)
 
     data = {
         "is_success": False,
