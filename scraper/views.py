@@ -31,12 +31,12 @@ def scrape_job_details(url, max_pages, category_slug):
 
     options = Options()
     options.add_argument('--headless')  # Run Chrome in headless mode
-    options.add_argument('--no-sandbox')  # Bypass OS security model, used in Docker
+    options.add_argument('--no-sandbox')  # Required on many Linux distributions
     options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
     options.add_argument('--disable-gpu')  # Disable GPU (required in headless mode)
     options.add_argument('--window-size=1920x1080')  # Set window size to avoid errors
-    options.add_argument('--remote-debugging-port=9222')  # Allows for remote debugging
-    options.add_argument('--user-data-dir=/tmp/chrome-user-data')  # Create a unique user data directory
+    options.add_argument('--remote-debugging-port=9222')  # For remote debugging
+   
 
     # Use ChromeDriver manager to automatically manage the chromedriver binary
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
