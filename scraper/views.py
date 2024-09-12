@@ -4,7 +4,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from .models import AvilableUrl, Job
+from .models import AvilableUrl, Job, Category
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.core.paginator import Paginator
@@ -16,8 +16,9 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException
 
-def scrape_job_details(url, max_pages):
+def scrape_job_details(url, max_pages, category_slug):
     base_url = url.strip()
+    category_slug = category_slug.strip()
     # service = Service('/usr/bin/chromedriver')
     service1 = Service(ChromeDriverManager().install())
     options = Options()
@@ -27,6 +28,7 @@ def scrape_job_details(url, max_pages):
     data = {
         "is_success": False,
         'url': url,
+        'category_slug': category_slug,
         'total_jobs_found': 0,
         'total_skipped_jobs': 0
     }
@@ -139,6 +141,7 @@ def scrape_job_details(url, max_pages):
         data = {
             "is_success": False,
             'url': base_url,
+            'category_slug': category_slug,
             'total_jobs_found': 0,
             'total_skipped_jobs': 0,
             'job_details': []
@@ -146,7 +149,8 @@ def scrape_job_details(url, max_pages):
 
         try:
             for page_number in range(1, max_pages + 1):
-                url = f"{base_url}?page={page_number}"
+            #    make url as f"{base_url}/{category_slug}/page:{page_number}/"
+                url = f"{base_url}{category_slug}/?page:{page_number}/"
                 print(f"Scraping URL: {url}")
                 driver.get(url)
                 page_source = BeautifulSoup(driver.page_source, 'html.parser')
@@ -222,16 +226,17 @@ def scrape_job_details(url, max_pages):
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
 
-
                  
 def scrape_job(request):
+    category = Category.objects.all()
     if request.method == 'POST':
         url = request.POST.get('url')
         max_pages = int(request.POST.get('max_pages'))
+        category.slug = request.POST.get('category')    
         if url:
             try:
-                scrape_job_details(url, max_pages)  # Assuming this function is defined elsewhere
-                data = scrape_job_details(url, max_pages)
+                scrape_job_details(url, max_pages, category.slug)
+                data = scrape_job_details(url, max_pages, category.slug)
                 if data['is_success']:
                     messages.success(request, f"Scraping completed successfully!")
                 else:
@@ -243,8 +248,8 @@ def scrape_job(request):
             messages.error(request, "No URL provided.")
             return JsonResponse({'error': 'No URL provided'}, status=400)
 
-    all_available_urls = AvilableUrl.objects.all()
-    return render(request, 'store_job.html', {'all_available_urls': all_available_urls})
+    
+    return render(request, 'store_job.html', {'category': category})
 
 
 # scrape_view make function for view all job data and render to template job_scraper.html
@@ -254,7 +259,7 @@ def scrape_view(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    return render(request, 'job_scraper.html', {'page_obj': page_obj})
+    return render(request, 'job_scraper.html')
 
 
 
