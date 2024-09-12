@@ -6,11 +6,12 @@
 
 <div class="container-fluid mt-5">
     <div class="d-flex justify-content-between mb-3">
-        <h2>Jobs Position</h2>
+        <h1>Jobs Position: {{ total_jobs }} </h1>
+    
     </div>
     
     <table class="table table-striped">
-        <thead>
+        <thead style="position: sticky; top: 0px; background-color: aliceblue;">
             <tr>
                 <th>Company</th>
                 <th>Position</th>
@@ -39,7 +40,7 @@
                             <button class="btn-primary rounded" type="submit">Update</button>
                         </form>
                     {% else %}
-                        {{ job.salary }}  <!-- If phone number exists, just display it -->
+                        {{ job.salary }}  
                     {% endif %}
                 </td>
                 <td>{{ job.job_type }}</td>
@@ -51,7 +52,7 @@
                             <button class="btn-primary rounded" type="submit">Update</button>
                         </form>
                     {% else %}
-                        {{ job.phone_number }}  <!-- If phone number exists, just display it -->
+                        {{ job.phone_number }} 
                     {% endif %}
                 </td>
                 <td><a href="{{ job.job_link }}" target="_blank">Link</a></td>
