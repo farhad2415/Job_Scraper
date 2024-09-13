@@ -9,20 +9,14 @@
     <form method="POST">
         {% csrf_token %}
         <div class="form-group">
-            {% comment %} <label for="url">URL</label>
-            <input type="text" class="form-control" id="url" name="url" placeholder="Enter URL"> {% endcomment %}
-            
-
             <div class="row">
                 <div class="col-md-6">
                     <label for="url">Select URL</label>
                     <select required class="form-control" id="url" name="url">
-                        <option value=""></option>
-                        {% for urls in all_available_urls %}
-                        <option value="{{ urls.url }}">{{ urls.url }}</option>
+                        <option value="">-----</option>
+                        {% for urls in url %}
+                        <option value="{{ urls.url }}">{{ urls.name }}</option>
                         {% endfor %}
-                        <option value="https://www.olx.ro/oferte/q-%C3%AEngrijitor-de-animale/">OLX</option>
-                        <option value="https://www.romjob.ro/anunturi/locuri-de-munca/">Romjob</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -39,8 +33,9 @@
                 </div>
                 <div class="col-md-2">
                     <label for="category">Category</label>
-                    {%for category in category%}
                     <select required class="form-control" id="category" name="category">
+                        <option value="">-----</option>
+                        {% for category in category %}
                         <option value="{{category.slug}}">{{category.name}}</option>
                         {%endfor%}
                     </select>
@@ -52,3 +47,4 @@
 </div>
 
 {% endblock %}
+

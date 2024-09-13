@@ -7,7 +7,15 @@
 <div class="container-fluid mt-5">
     <div class="d-flex justify-content-between mb-3">
         <h1>Jobs Position: {{ total_jobs }} </h1>
-    
+        <h5>Translate this page:</h5>
+        <div id="google_translate_element" class="tesx"></div>
+    </div>
+
+     <script type="text/javascript">
+            function googleTranslateElementInit() {
+            new google.translate.TranslateElement({pageLanguage: 'zh-CN', includedLanguages: 'en' , layout: google.translate.TranslateElement.InlineLayout.EASY, multilanguagePage: true}, 'google_translate_element');
+            }
+    </script><script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
     </div>
     
     <table class="table table-striped">
@@ -15,6 +23,7 @@
             <tr>
                 <th>Company</th>
                 <th>Position</th>
+                <th>Category</th>
                 <th>Posting Date</th>
                 <th>Location</th>
                 <th>Salary</th>
@@ -22,6 +31,7 @@
                 <th>Phone Number</th>
                 <th>Job Link</th>
                 <th>Description</th>
+                <th>Job Scraping Date</th>
                 <th>Source</th>
             </tr>
         </thead>
@@ -30,6 +40,7 @@
             <tr>
                 <td>{{ job.company }}</td>
                 <td>{{ job.position }}</td>
+                <td>{{ job.job_category }}</td>
                 <td>{{ job.job_posted }}</td>
                 <td>{{ job.location }}</td>
                 <td>
@@ -57,6 +68,7 @@
                 </td>
                 <td><a href="{{ job.job_link }}" target="_blank">Link</a></td>
                 <td>{{ job.description }}</td>
+                <td>{{ job.created_at }}</td>
                 <td>{{ job.source }}</td>
             </tr>
             {% empty %}

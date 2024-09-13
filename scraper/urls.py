@@ -3,7 +3,6 @@ from . import views
 urlpatterns = [
     path('view_scraped_data/', views.scrape_view, name='scrape_job_details'),
     path('start_scraping/', views.scrape_job, name='start_scraping'),
-    # path('get-categories/', views.get_categories_by_url, name='get_categories_by_url'),
     path('update-phone-number/<int:job_id>/', views.update_phone_number, name='update_phone_number'),
     path('update-salary/<int:job_id>/', views.update_salary, name='update_salary'),
     path('', views.home, name='home'),

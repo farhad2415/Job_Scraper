@@ -9,37 +9,19 @@ from django.core.paginator import Paginator
 from django.contrib import messages
 from selenium.common.exceptions import WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.options import Options as chrome_options
+from django.shortcuts import render, redirect
+
 def scrape_job_details(url, max_pages, category_slug):
     base_url = url.strip()
     category_slug = category_slug.strip()
+    category_name = Category.objects.get(slug=category_slug).name
     # service = Service('/usr/bin/chromedriver')
-    # service1 = Service(ChromeDriverManager().install())
-    # options = Options()
-    # options.add_argument('--headless') 
-    # driver = webdriver.Chrome(service=service1, options=options)
-   
-   
-    # options = Options()
-    # options.add_argument('--window-size=1920,1080')
-    # chrome_options.add_argument('--headless')
-    # chrome_options.add_argument('--no-sandbox')
-    # chrome_options.add_argument('--disable-dev-shm-usage')
-    # driver = webdriver.Chrome(service=Service(
-    #     ChromeDriverManager().install()), options=options)
-
-
+    service1 = Service(ChromeDriverManager().install())
     options = Options()
-    options.add_argument('--headless')  # Run Chrome in headless mode
-    options.add_argument('--no-sandbox')  # Required on many Linux distributions
-    options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems
-    options.add_argument('--disable-gpu')  # Disable GPU (required in headless mode)
-    options.add_argument('--window-size=1920x1080')  # Set window size to avoid errors
-    options.add_argument('--remote-debugging-port=9222')  # For remote debugging
+    options.add_argument('--headless') 
+    driver = webdriver.Chrome(service=service1, options=options)
    
-
-    # Use ChromeDriver manager to automatically manage the chromedriver binary
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+   
 
     data = {
         "is_success": False,
@@ -114,7 +96,7 @@ def scrape_job_details(url, max_pages, category_slug):
                     description = formatted_description
                     # save to Job model
                     if not Job.objects.filter(position=job_title_detail, company=company_name, location=job_location, job_type=job_type).exists():
-                        scraped_data = Job(position=job_title_detail, company=company_name, location=job_location, job_type=job_type, description=description, job_posted=job_posting_date, job_link=job_details_url, source=source)
+                        scraped_data = Job(position=job_title_detail, company=company_name, location=job_location, job_type=job_type, description=description, job_posted=job_posting_date, job_link=job_details_url, source=source, job_category=category_name)
                         scraped_data.save()
 
                 else:
@@ -140,20 +122,20 @@ def scrape_job_details(url, max_pages, category_slug):
 
                  
 def scrape_job(request):
+    url = AvilableUrl.objects.all()
     category = Category.objects.all()
+
     if request.method == 'POST':
         url = request.POST.get('url')
         max_pages = int(request.POST.get('max_pages'))
-        category.slug = request.POST.get('category')    
+        category.slug = request.POST.get('category')
         if url:
             try:
-                scrape_job_details(url, max_pages, category.slug)
                 data = scrape_job_details(url, max_pages, category.slug)
                 if data['is_success']:
                     messages.success(request, f"Scraping completed successfully!")
                 else:
                     messages.error(request, f"Invalid Url given ::{data['url']}.")
-                # messages.success(request, "Scraping completed successfully!")
             except Exception as e:
                 messages.error(request, f"An error occurred: {str(e)}")
         else:
@@ -161,7 +143,7 @@ def scrape_job(request):
             return JsonResponse({'error': 'No URL provided'}, status=400)
 
     
-    return render(request, 'store_job.html', {'category': category})
+    return render(request, 'store_job.html', {'url': url, 'category': category})
 
 
 # scrape_view make function for view all job data and render to template job_scraper.html
@@ -177,8 +159,6 @@ def scrape_view(request):
                         'page_obj': page_obj, 
                         'total_jobs': total_jobs
                         })
-
-
 
 from django.shortcuts import redirect
 # Update Phone Number When Geeting Null
@@ -207,13 +187,21 @@ def update_salary(request, job_id):
 def home(request):
     return render(request, 'home.html')
 
-
 # export_to_excel function to export job data to excel file
 import pandas as pd
 from django.http import HttpResponse
+from django.utils.timezone import make_naive
+from datetime import datetime
+
 def export_to_excel(request):
     data = Job.objects.all()
-    df = pd.DataFrame(list(data.values()))
+    data_dict = list(data.values())
+    for item in data_dict:
+        for key, value in item.items():
+            if isinstance(value, pd.Timestamp) or isinstance(value, datetime):
+                item[key] = make_naive(value)
+
+    df = pd.DataFrame(data_dict)
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="jobs.xlsx"'
     df.to_excel(response, index=False, engine='openpyxl')
