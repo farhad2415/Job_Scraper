@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: gunicorn --access-logfile - --workers 1 --bind 0.0.0.0:8003 job_scraper.wsgi:application
+    volumes:
+      - .:/app
+    ports:
+      - "8003:8003"
