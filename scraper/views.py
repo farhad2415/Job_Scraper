@@ -31,7 +31,7 @@ def scrape_job_details(url, max_pages, category_slug):
     options.add_argument('--disable-features=UseDBus')  # Disable DBus features
 
     service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options, service_args=["--timeout=60"])
+    driver = webdriver.Chrome(service=service, options=options)
 
                                                                                                                                            
 
