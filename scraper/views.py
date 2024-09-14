@@ -11,6 +11,7 @@ from selenium.common.exceptions import WebDriverException
 from webdriver_manager.chrome import ChromeDriverManager
 from django.shortcuts import render, redirect
 
+
 def scrape_job_details(url, max_pages, category_slug):
     base_url = url.strip()
     category_slug = category_slug.strip()
@@ -23,7 +24,6 @@ def scrape_job_details(url, max_pages, category_slug):
    
 
     options = Options()
-    options.binary_location = "/opt/google/chrome/chrome"
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
@@ -31,8 +31,9 @@ def scrape_job_details(url, max_pages, category_slug):
     options.add_argument('--disable-features=UseDBus')  # Disable DBus features
 
     service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)                                                                                                                                             
-    
+    driver = webdriver.Chrome(service=service, options=options)      
+
+                                                                                                                                           
 
     data = {
         "is_success": False,
