@@ -4,6 +4,7 @@ from django.contrib.messages import constants as messages
 import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+import sentry_sdk
 
 
 # Quick-start development settings - unsuitable for production
@@ -77,6 +78,12 @@ DATABASES = {
     }
 }
 
+
+sentry_sdk.init(
+    dsn="https://8ecd03268fb9c23f41d163687097278b@o4507950018330624.ingest.de.sentry.io/4507950021345360",
+    traces_sample_rate=1.0,
+    profiles_sample_rate=1.0,
+)
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
