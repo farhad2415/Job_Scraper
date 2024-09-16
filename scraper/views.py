@@ -28,7 +28,7 @@ def scrape_job_details(url, max_pages, category_slug):
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--remote-debugging-port=9222')
 
-    serivce = Service('/usr/bin/chromedriver')
+    serivce = Service(executable_path='/usr/bin/chromedriver')
     driver = webdriver.Chrome(service=serivce, options=chrome_options)
 
                                                                                                                                            
