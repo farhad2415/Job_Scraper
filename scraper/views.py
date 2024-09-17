@@ -9,6 +9,7 @@ from django.shortcuts import render, redirect
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 
 def scrape_job_details(url, max_pages, category_slug):
     base_url = url.strip()
@@ -28,7 +29,7 @@ def scrape_job_details(url, max_pages, category_slug):
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--remote-debugging-port=9222')
 
-    serivce = Service(executable_path='/usr/bin/chromedriver')
+    serivce = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=serivce, options=chrome_options)
 
                                                                                                                                            
