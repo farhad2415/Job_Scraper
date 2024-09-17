@@ -15,3 +15,4 @@ EXPOSE 8004
 
 # Command to run the application
 CMD ["gunicorn", "--access-logfile", "-", "--workers", "1", "--bind", "0.0.0.0:8004", "job_scraper.wsgi:application"]
+#comment
