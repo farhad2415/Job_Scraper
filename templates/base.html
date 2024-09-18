@@ -1,4 +1,4 @@
-
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,6 +25,11 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link btn-info rounded" style="color: aliceblue;" href="/view_scraped_data/" target="_blank">Previous Records</a>
+                </li>
+                <li class="nav-item ml-auto">
+                    {% if user.is_authenticated %}
+                        <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                    {% endif %}
                 </li>
             </ul>
         </div>

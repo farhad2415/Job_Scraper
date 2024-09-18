@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
+from requests import request
 from .models import AvilableUrl, Job, Category
 from django.http import JsonResponse
-from django.shortcuts import render
 from django.core.paginator import Paginator
 from django.contrib import messages
 from selenium.common.exceptions import WebDriverException
@@ -10,18 +10,13 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
-
-def scrape_job_details(url, max_pages, category_slug):
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout, authenticate, login as auth_login
+ 
+def scrape_job_details(url, max_pages, category_slug, request):
     base_url = url.strip()
     category_slug = category_slug.strip()
     category_name = Category.objects.get(slug=category_slug).name
-    # service = Service('/usr/bin/chromedriver')
-    # service1 = Service(ChromeDriverManager().install())
-    # options = Options()
-    # options.add_argument('--headless') 
-    # driver = webdriver.Chrome(service=service1, options=options)
-   
-
     chrome_options = Options()
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
@@ -29,8 +24,8 @@ def scrape_job_details(url, max_pages, category_slug):
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--remote-debugging-port=9222')
 
-    serivce = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=serivce, options=chrome_options)
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
 
                                                                                                                                            
 
@@ -58,7 +53,7 @@ def scrape_job_details(url, max_pages, category_slug):
                 url = f"{base_url}{category_slug}/?page:{page_number}/"
                 print(f"Scraping URL: {url}")
                 driver.get(url)
-                page_source = BeautifulSoup(driver.page_source, 'html.parser')
+                page_source = BeautifulSoup(driver.page_source, features="lxml")
                 
                 # Check for end of pages
                 if "Nu am găsit niciun rezultat" in page_source.get_text():
@@ -107,7 +102,8 @@ def scrape_job_details(url, max_pages, category_slug):
                     description = formatted_description
                     # save to Job model
                     if not Job.objects.filter(position=job_title_detail, company=company_name, location=job_location, job_type=job_type).exists():
-                        scraped_data = Job(position=job_title_detail, company=company_name, location=job_location, job_type=job_type, description=description, job_posted=job_posting_date, job_link=job_details_url, source=source, job_category=category_name)
+                        scraped_data = Job(position=job_title_detail, company=company_name, location=job_location, job_type=job_type, 
+                                           description=description, job_posted=job_posting_date, job_link=job_details_url, source=source, job_category=category_name, user=request.user)
                         scraped_data.save()
 
                 else:
@@ -131,7 +127,8 @@ def scrape_job_details(url, max_pages, category_slug):
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
 
-                 
+
+@login_required(login_url='login')              
 def scrape_job(request):
     url = AvilableUrl.objects.all()
     category = Category.objects.all()
@@ -142,7 +139,7 @@ def scrape_job(request):
         category.slug = request.POST.get('category')
         if url:
             try:
-                data = scrape_job_details(url, max_pages, category.slug)
+                data = scrape_job_details(url, max_pages, category.slug, request)
                 if data['is_success']:
                     messages.success(request, f"Scraping completed successfully!")
                 else:
@@ -158,8 +155,9 @@ def scrape_job(request):
 
 
 # scrape_view make function for view all job data and render to template job_scraper.html
+@login_required(login_url='login')  
 def scrape_view(request):
-    jobs = Job.objects.all() 
+    jobs = Job.objects.filter(user=request.user).order_by('-created_at')
     paginator = Paginator(jobs, 20) 
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -171,7 +169,6 @@ def scrape_view(request):
                         'total_jobs': total_jobs
                         })
 
-from django.shortcuts import redirect
 # Update Phone Number When Geeting Null
 def update_phone_number(request, job_id):
     if request.method == "POST":
@@ -195,8 +192,29 @@ def update_salary(request, job_id):
 
 
 # Defualt Home Page
+@login_required(login_url='login')
 def home(request):
     return render(request, 'home.html')
+
+# Login Page #login
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('home')
+    if request.method == 'POST':
+        username = request.POST['username']
+        password = request.POST['password']
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            auth_login(request, user)
+            return redirect('home')  # Redirect to a home page or dashboard
+        else:
+            messages.error(request, 'Invalid username or password')
+    return render(request, 'login.html')
+
+def logout_view(request):
+    logout(request)
+    messages.success(request, 'You have been logged out successfully.')
+    return redirect('login')
 
 # export_to_excel function to export job data to excel file
 import pandas as pd
@@ -217,3 +235,5 @@ def export_to_excel(request):
     response['Content-Disposition'] = 'attachment; filename="jobs.xlsx"'
     df.to_excel(response, index=False, engine='openpyxl')
     return response
+
+

@@ -1,18 +1,18 @@
-FROM python:3.10-slim
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+FROM python:3.12.2
 
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
 COPY . /app
 
-# Install pip requirements
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --trusted-host pypi.python.org -r requirements.txt
 
-EXPOSE 8004
+RUN apt-get update && apt-get install -y wget unzip && \
+    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
+    apt install -y ./google-chrome-stable_current_amd64.deb && \
+    rm google-chrome-stable_current_amd64.deb && \
+    apt-get clean
+    
 
-# Command to run the application
-CMD ["gunicorn", "--access-logfile", "-", "--workers", "1", "--bind", "0.0.0.0:8004", "job_scraper.wsgi:application"]
-#comment
+EXPOSE 8003
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8003"]
