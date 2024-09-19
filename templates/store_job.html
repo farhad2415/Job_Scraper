@@ -14,8 +14,8 @@
                     <label for="url">Select URL</label>
                     <select required class="form-control" id="url" name="url">
                         <option value="">-----</option>
-                        {% for urls in url %}
-                        <option value="{{ urls.url }}">{{ urls.name }}</option>
+                        {% for urlss in url %}
+                        <option value="{{ urlss.url }}">{{ urlss.name }}</option>
                         {% endfor %}
                     </select>
                 </div>

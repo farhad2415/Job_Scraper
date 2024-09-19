@@ -130,7 +130,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
 
 @login_required(login_url='login')              
 def scrape_job(request):
-    url = AvilableUrl.objects.all()
+    urls = AvilableUrl.objects.all()
     category = Category.objects.all()
 
     if request.method == 'POST':
@@ -151,7 +151,7 @@ def scrape_job(request):
             return JsonResponse({'error': 'No URL provided'}, status=400)
 
     
-    return render(request, 'store_job.html', {'url': url, 'category': category})
+    return render(request, 'store_job.html', {'url': urls, 'category': category})
 
 
 # scrape_view make function for view all job data and render to template job_scraper.html
