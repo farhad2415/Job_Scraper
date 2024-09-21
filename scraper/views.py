@@ -27,9 +27,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
-
-                                                                                                                                           
-
+                                                                                                                              
     data = {
         "is_success": False,
         'url': url,
@@ -127,7 +125,52 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
+    if base_url == "https://jobzz.ro/":
+        data = {
+            "is_success": False,
+            'url': base_url,
+            'category_slug': category_slug,
+            'total_jobs_found': 0,
+            'total_skipped_jobs': 0,
+            'job_details': []
+        }
+        try:
+            for page_number in range(1, max_pages + 1):
+                url = f"{base_url}{category_slug}_{page_number}.html"
+                driver.get(url)
+                page_source = BeautifulSoup(driver.page_source, features="lxml")
+                
+                if "Nu am găsit niciun rezultat" in page_source.get_text():
+                    print(f"No more pages found after page {page_number-1}.")
+                    break
+                job_grid_elements = page_source.find_all("a", class_='main_items item_cart first_item_cart')
+                if not job_grid_elements:
+                    print(f"No job elements found on page {page_number}.")
+                    break
+                for job_element in job_grid_elements:
+                    #title from span
+                    job_title = job_element.find("span", class_="title").get_text(strip=True) if job_element.find("span", class_="title") else "Position not found"
+                    job_url = job_element['href'] if job_element else None
+                    if not job_url:
+                        print("Job URL not found, skipping.")
+                        data['total_skipped_jobs'] += 1
+                        continue
+                    job_details_url = f"{job_url}"
+                    driver.get(job_details_url)
+                    job_details_page = BeautifulSoup(driver.page_source, 'lxml')
+                    salary = job_details_page.find("span", id="price").get_text(strip=True) if job_details_page.find("span", id="price") else "Salary not found"
+                    #location_city by id
+                    job_location = job_details_page.find("span", id="location_city").get_text(strip=True) if job_details_page.find("span", id="location_city") else "Location not found"
+                    source = "Jobzz.ro"
+                    company_name = job_details_page.find("div", class_="account_right").get_text(strip=True) if job_details_page.find("div", class_="account_right") else "Company not found"
+                    category_name = Category.objects.get(slug=category_slug).name
+                    job_posting_date = job_details_page.find("div", class_="info_extra_details").get_text(strip=True) if job_details_page.find("div", class_="info_extra_details") else "Date not found"
+                    job_type = job_details_page.find("span", id="job_type").get_text(strip=True) if job_details_page.find("span", id="job_type") else "Type not found"
+                    job_description = job_details_page.find("p", id="paragraph").get_text(separator=" ", strip=True) if job_details_page.find("p", id="paragraph") else "Description not found"
 
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 # Scrape Job
 @login_required(login_url='login')
@@ -241,7 +284,7 @@ from django.utils.timezone import make_naive
 from datetime import datetime
 
 def export_to_excel(request):
-    data = Job.objects.all()
+    data = Job.objects.filter(user=request.user)
     data_dict = list(data.values())
     for item in data_dict:
         for key, value in item.items():
