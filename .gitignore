@@ -4,4 +4,5 @@ myvenv
 __pycache__
 .venv
 
+# ignore db.sqlite3
 db.sqlite3
