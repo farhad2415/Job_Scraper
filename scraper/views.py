@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 from requests import request
+from django.shortcuts import get_object_or_404
 from .models import AvilableUrl, Job, Category
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -128,33 +129,50 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 print(f"An unexpected error occurred while quitting the driver: {e}")
 
 
-@login_required(login_url='login')              
+# Scrape Job
+@login_required(login_url='login')
 def scrape_job(request):
-    urls = AvilableUrl.objects.all()
-    category = Category.objects.all()
+    urls = AvilableUrl.objects.all()  
+    selected_url = None 
+    categories = Category.objects.none()  
+    max_pages = None
+    category_slug = None
 
     if request.method == 'POST':
-        url = request.POST.get('url')
-        max_pages = int(request.POST.get('max_pages'))
-        category.slug = request.POST.get('category')
-        if url:
+        url_id = request.POST.get('url') 
+        max_pages = request.POST.get('max_pages')  
+        category_slug = request.POST.get('category') 
+
+        # If URL is selected
+        if url_id:
+            selected_url = get_object_or_404(AvilableUrl, id=url_id)
+            # Fetch related categories for the selected URL
+            categories = selected_url.category.all()
+
+        # If full form is submitted (both max_pages and category should be provided)
+        if max_pages and category_slug and selected_url:
             try:
-                data = scrape_job_details(url, max_pages, category.slug, request)
+                max_pages = int(max_pages)  
+                category = get_object_or_404(Category, slug=category_slug)
+                data = scrape_job_details(selected_url.url, max_pages, category.slug, request)
                 if data['is_success']:
-                    messages.success(request, f"Scraping completed successfully!")
+                    messages.success(request, "Scraping completed successfully!")
                 else:
-                    messages.error(request, f"Invalid Url given ::{data['url']}.")
+                    messages.error(request, f"Invalid URL given: {data['url']}.")
+            except ValueError:
+                messages.error(request, "Max pages must be a valid number.")
             except Exception as e:
                 messages.error(request, f"An error occurred: {str(e)}")
-        else:
-            messages.error(request, "No URL provided.")
-            return JsonResponse({'error': 'No URL provided'}, status=400)
 
-    
-    return render(request, 'store_job.html', {'url': urls, 'category': category})
+    return render(request, 'store_job.html', {
+        'urls': urls,
+        'categories': categories,
+        'selected_url': selected_url,  
+        'max_pages': max_pages,  
+        'category_slug': category_slug, 
+    })
 
-
-# scrape_view make function for view all job data and render to template job_scraper.html
+# Scrape View
 @login_required(login_url='login')  
 def scrape_view(request):
     jobs = Job.objects.filter(user=request.user).order_by('-created_at')

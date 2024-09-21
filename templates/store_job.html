@@ -14,16 +14,18 @@
             <div class="row">
                 <div class="col-md-6">
                     <label for="url">Select URL</label>
-                    <select required class="form-control" id="url" name="url">
+                    <select required class="form-control" id="url" name="url" onchange="this.form.submit()">
                         <option value="">-----</option>
-                        {% for urlss in url %}
-                        <option value="{{ urlss.url }}">{{ urlss.name }}</option>
+                        {% for urlss in urls %}
+                        <option value="{{ urlss.id }}" {% if selected_url and urlss.id == selected_url.id %}selected{% endif %}>
+                            {{ urlss.name }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-md-2">
                     <label for="max_pages">Max Pages</label>
-                    <select required class="form-control" id="max_pages" name="max_pages">
+                    <select class="form-control" id="max_pages" name="max_pages">
                         <option value="">-----</option>
                         <option value="1">1</option>
                         <option value="5">5</option>
@@ -35,11 +37,13 @@
                 </div>
                 <div class="col-md-2">
                     <label for="category">Category</label>
-                    <select required class="form-control" id="category" name="category">
+                    <select class="form-control" id="category" name="category">
                         <option value="">-----</option>
-                        {% for category in category %}
-                        <option value="{{category.slug}}">{{category.name}}</option>
-                        {%endfor%}
+                        {% for category in categories %}
+                        <option value="{{ category.slug }}" {% if category_slug == category.slug %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>
