@@ -168,6 +168,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                     job_type = job_details_page.find("span", id="job_type").get_text(strip=True) if job_details_page.find("span", id="job_type") else "Type not found"
                     job_description = job_details_page.find("p", id="paragraph").get_text(separator=" ", strip=True) if job_details_page.find("p", id="paragraph") else "Description not found"
 
+                    print(f"Job Title: {job_title}", f"Job URL: {job_url}", f"Salary: {salary}", f"Location: {job_location}", f"Company: {company_name}", f"Category: {category_name}", f"Job Posted: {job_posting_date}", f"Job Type: {job_type}", f"Description: {job_description}", sep="\n")
 
         except Exception as e:
             print(f"An error occurred: {e}")
