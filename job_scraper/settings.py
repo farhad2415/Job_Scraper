@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'scraper',
     'bootstrap4',
     'crispy_forms',
+    'import_export',
 
 ]
 

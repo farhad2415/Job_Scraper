@@ -41,5 +41,5 @@ class Job(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE, blank=True, null=True)
 
-    def __str__(self):
-        return self.company + " - " + self.position
+    def __str__(self):  
+        return self.company
