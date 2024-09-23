@@ -132,7 +132,6 @@ def scrape_job_details(url, max_pages, category_slug, request):
             'category_slug': category_slug,
             'total_jobs_found': 0,
             'total_skipped_jobs': 0,
-            'job_details': []
         }
         try:
             for page_number in range(1, max_pages + 1):
@@ -168,10 +167,30 @@ def scrape_job_details(url, max_pages, category_slug, request):
                     job_type = job_details_page.find("span", id="job_type").get_text(strip=True) if job_details_page.find("span", id="job_type") else "Type not found"
                     job_description = job_details_page.find("p", id="paragraph").get_text(separator=" ", strip=True) if job_details_page.find("p", id="paragraph") else "Description not found"
 
-                    print(f"Job Title: {job_title}", f"Job URL: {job_url}", f"Salary: {salary}", f"Location: {job_location}", f"Company: {company_name}", f"Category: {category_name}", f"Job Posted: {job_posting_date}", f"Job Type: {job_type}", f"Description: {job_description}", sep="\n")
-
+                    if not Job.objects.filter(position=job_title, company=company_name, location=job_location, job_type=job_type).exists():
+                        scraped_data = Job(position=job_title, company=company_name, location=job_location, job_type=job_type, 
+                                           description=job_description, job_posted=job_posting_date, job_link=job_details_url, source=source, job_category=category_name, user=request.user, salary=salary)
+                        scraped_data.save()
+                    else:
+                        total_skipped_jobs += 1
+                        data = {
+                            "is_success": True,
+                            'url': url,
+                            'total_jobs_found': len(job_grid_elements),
+                            'total_skipped_jobs': total_skipped_jobs
+                        }
         except Exception as e:
             print(f"An error occurred: {e}")
+        finally:
+            try:
+                driver.quit()
+            except WebDriverException as e:
+                print(f"WebDriverException: {e}")
+            except PermissionError as e:
+                print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
+            except Exception as e:
+                print(f"An unexpected error occurred while quitting the driver: {e}")
+    return data
 
 # Scrape Job
 @login_required(login_url='login')
@@ -186,14 +205,9 @@ def scrape_job(request):
         url_id = request.POST.get('url') 
         max_pages = request.POST.get('max_pages')  
         category_slug = request.POST.get('category') 
-
-        # If URL is selected
         if url_id:
             selected_url = get_object_or_404(AvilableUrl, id=url_id)
-            # Fetch related categories for the selected URL
             categories = selected_url.category.all()
-
-        # If full form is submitted (both max_pages and category should be provided)
         if max_pages and category_slug and selected_url:
             try:
                 max_pages = int(max_pages)  
