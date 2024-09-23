@@ -179,6 +179,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                             'total_jobs_found': len(job_grid_elements),
                             'total_skipped_jobs': total_skipped_jobs
                         }
+            return data
         except Exception as e:
             print(f"An error occurred: {e}")
         finally:
@@ -214,7 +215,7 @@ def scrape_job(request):
                 category = get_object_or_404(Category, slug=category_slug)
                 data = scrape_job_details(selected_url.url, max_pages, category.slug, request)
                 if data['is_success']:
-                    messages.success(request, "Scraping completed successfully!")
+                    messages.success(request, "Scraping completed successfully!, Total Jobs Found: {data['total_jobs_found']}")
                 else:
                     messages.error(request, f"Invalid URL given: {data['url']}.")
             except ValueError:
