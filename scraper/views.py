@@ -126,12 +126,14 @@ def scrape_job_details(url, max_pages, category_slug, request):
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
     if base_url == "https://jobzz.ro/":
+
+        total_stored = 0
+        total_job_found = 0
+        total_skipped_jobs = 0
         data = {
             "is_success": False,
             'url': base_url,
             'category_slug': category_slug,
-            'total_jobs_found': 0,
-            'total_skipped_jobs': 0,
         }
         try:
             for page_number in range(1, max_pages + 1):
@@ -142,12 +144,12 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 if "Nu am găsit niciun rezultat" in page_source.get_text():
                     print(f"No more pages found after page {page_number-1}.")
                     break
-                job_grid_elements = page_source.find_all("a", class_='main_items item_cart first_item_cart')
+                job_grid_elements = page_source.find_all("a", class_='main_items item_cart')
                 if not job_grid_elements:
                     print(f"No job elements found on page {page_number}.")
                     break
                 for job_element in job_grid_elements:
-                    #title from span
+                    total_job_found = len(job_grid_elements)
                     job_title = job_element.find("span", class_="title").get_text(strip=True) if job_element.find("span", class_="title") else "Position not found"
                     job_url = job_element['href'] if job_element else None
                     if not job_url:
@@ -167,18 +169,20 @@ def scrape_job_details(url, max_pages, category_slug, request):
                     job_type = job_details_page.find("span", id="job_type").get_text(strip=True) if job_details_page.find("span", id="job_type") else "Type not found"
                     job_description = job_details_page.find("p", id="paragraph").get_text(separator=" ", strip=True) if job_details_page.find("p", id="paragraph") else "Description not found"
 
-                    if not Job.objects.filter(position=job_title, company=company_name, location=job_location, job_type=job_type).exists():
+                    if not Job.objects.filter(position=job_title, company=company_name, location=job_location, job_type=job_type, user=request.user).exists():
                         scraped_data = Job(position=job_title, company=company_name, location=job_location, job_type=job_type, 
                                            description=job_description, job_posted=job_posting_date, job_link=job_details_url, source=source, job_category=category_name, user=request.user, salary=salary)
                         scraped_data.save()
+                        total_stored += 1
                     else:
                         total_skipped_jobs += 1
-                        data = {
-                            "is_success": True,
-                            'url': url,
-                            'total_jobs_found': len(job_grid_elements),
-                            'total_skipped_jobs': total_skipped_jobs
-                        }
+                data = {
+                    "is_success": True,
+                    'url': url,
+                    'total_jobs_found': total_job_found,
+                    'total_stored': total_stored,
+                   ' total_skipped_jobs': total_skipped_jobs
+                }
             return data
         except Exception as e:
             print(f"An error occurred: {e}")
@@ -191,8 +195,6 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
-    return data
-
 # Scrape Job
 @login_required(login_url='login')
 def scrape_job(request):
@@ -215,7 +217,7 @@ def scrape_job(request):
                 category = get_object_or_404(Category, slug=category_slug)
                 data = scrape_job_details(selected_url.url, max_pages, category.slug, request)
                 if data['is_success']:
-                    messages.success(request, "Scraping completed successfully!, Total Jobs Found: {data['total_jobs_found']}")
+                    messages.success(request, f"Scraped {data['total_jobs_found']} Jobs ! and Stored {data['total_stored']} Jobs")
                 else:
                     messages.error(request, f"Invalid URL given: {data['url']}.")
             except ValueError:
