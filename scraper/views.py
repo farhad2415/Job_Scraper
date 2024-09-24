@@ -128,13 +128,13 @@ def scrape_job_details(url, max_pages, category_slug, request):
     if base_url == "https://jobzz.ro/":
 
         total_stored = 0
-        total_job_found = 0
         total_skipped_jobs = 0
         data = {
             "is_success": False,
             'url': base_url,
             'category_slug': category_slug,
         }
+        total_job_found = 0
         try:
             for page_number in range(1, max_pages + 1):
                 url = f"{base_url}{category_slug}_{page_number}.html"
@@ -148,8 +148,8 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 if not job_grid_elements:
                     print(f"No job elements found on page {page_number}.")
                     break
+                total_job_found = len(job_grid_elements)
                 for job_element in job_grid_elements:
-                    total_job_found = len(job_grid_elements)
                     job_title = job_element.find("span", class_="title").get_text(strip=True) if job_element.find("span", class_="title") else "Position not found"
                     job_url = job_element['href'] if job_element else None
                     if not job_url:

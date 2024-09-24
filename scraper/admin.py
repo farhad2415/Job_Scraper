@@ -19,7 +19,6 @@ class JobResource(resources.ModelResource):
         export_order = ('id', 'position', 'company', 'location', 'job_type', 'description', 'job_posted', 'job_link', 'source', 'job_category', 'user', 'salary')
 
     def before_import_row(self, row, **kwargs):
-        # Handle None values before saving
         if not row['position']:
             row['position'] = "Position not provided"
         
@@ -31,8 +30,6 @@ class JobResource(resources.ModelResource):
         
         if not row['job_type']:
             row['job_type'] = "Job type not provided"
-
-        # Add other fields as necessary to avoid NoneType errors
 
         return super().before_import_row(row, **kwargs)
     
