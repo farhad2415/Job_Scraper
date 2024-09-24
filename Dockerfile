@@ -12,12 +12,7 @@ RUN apt-get update && apt-get install -y wget unzip && \
     rm google-chrome-stable_current_amd64.deb && \
     apt-get clean
 
-# makemigrations
-RUN echo "makemigrations" && \
-    python manage.py makemigrations \
-    echo "This is my termional command" && \
-    sudo cp /home/bin/fhfhf /usr/bin/fhfhf && \
-    sudo chmod +x /usr/bin/fhfhf
+
 
 EXPOSE 8003
 
