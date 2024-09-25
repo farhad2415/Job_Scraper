@@ -216,7 +216,6 @@ def scrape_job(request):
                 max_pages = int(max_pages)  
                 category = get_object_or_404(Category, slug=category_slug)
                 data = scrape_job_details(selected_url.url, max_pages, category.slug, request)
-                data = 'is_success'; True 
                 if data['is_success']:
                     return JsonResponse({
                         'is_success': True,
