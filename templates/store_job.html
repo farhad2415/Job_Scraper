@@ -3,12 +3,11 @@
 {% block title %}Data Scraping{% endblock %}
 
 {% block searchcontent %}
-
 <div class="container mt-5">
     <h2>Select a URL to Scrape</h2>
-    <h2>my name is {{request.user}}</h2>
+    <h2>My name is {{ request.user }}</h2>
 
-    <form method="POST">
+    <form id="scrapeForm" method="POST" action="{% url 'start_scraping' %}">
         {% csrf_token %}
         <div class="form-group">
             <div class="row">
@@ -25,7 +24,7 @@
                 </div>
                 <div class="col-md-2">
                     <label for="max_pages">Max Pages</label>
-                    <select class="form-control" id="max_pages" name="max_pages">
+                    <select required class="form-control" id="max_pages" name="max_pages">
                         <option value="">-----</option>
                         <option value="1">1</option>
                         <option value="5">5</option>
@@ -37,7 +36,7 @@
                 </div>
                 <div class="col-md-2">
                     <label for="category">Category</label>
-                    <select class="form-control" id="category" name="category">
+                    <select required class="form-control" id="category" name="category">
                         <option value="">-----</option>
                         {% for category in categories %}
                         <option value="{{ category.slug }}" {% if category_slug == category.slug %}selected{% endif %}>
@@ -48,9 +47,115 @@
                 </div>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary">Submit</button>
+        <button type="submit" class="btn btn-primary" id="submitButton">Submit</button>
     </form>
+
+    <!-- Linear Progress Bar and Percentage Display -->
+    <div class="progress" id="progressBarContainer" style="display: none; margin-top: 20px;">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        <span id="progressPercentage" style="position: absolute; color: rgb(255, 255, 255); top: 16px; margin-left: -18px;">0%</span>
+        <div class="dog" id="dog" style="position: absolute; top: 10px; font-size: 20px; transition: transform 0.1s linear;">🐶</div>
+    </div>
+    <div id="resultCard" class="card mt-3" style="display: none;">
+        <div class="card-body">
+            <h5 class="card-title">Job Scraping Results</h5>
+            <p class="card-text" id="scrapingResult"></p>
+        </div>
+    </div>
+    
 </div>
 
-{% endblock %}
+<style>
+.progress {
+    height: 30px; 
+    background-color: #000000; 
+    border-radius: 5px;
+    position: relative;
+    top: 0px;
+}
 
+.progress-bar {
+    height: 100%;
+    transition: width 0.4s; 
+}
+
+.dog {
+    position: absolute;
+    bottom: -30px; 
+    left: 0; 
+    font-size: 20px;
+    transition: transform 0.1s ;
+}
+</style>
+<script>
+    document.getElementById('scrapeForm').addEventListener('submit', function (event) {
+        event.preventDefault(); 
+
+        const formData = new FormData(this); 
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const progressBarContainer = document.getElementById('progressBarContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercentage = document.getElementById('progressPercentage');
+        const dog = document.getElementById('dog');
+        progressBarContainer.style.display = 'block';
+
+        // Reset the progress bar
+        progressBar.style.width = '0%';
+        progressBar.setAttribute('aria-valuenow', 0);
+        progressPercentage.innerText = '0%';
+        dog.style.transform = 'translateX(0)';
+
+        // Start progress bar animation
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 100 / (120);
+            progressBar.style.width = progress + '%';
+            progressBar.setAttribute('aria-valuenow', progress);
+            progressPercentage.innerText = Math.round(progress) + '%';
+            
+            dog.style.left = `${progress}%`;
+            progressPercentage.style.left = `${progress}%`;
+            if (progress >= 100) {
+                clearInterval(interval);
+                dog.style.display = 'none'; 
+                // hide the dog emoji
+            }
+        }, 1000); 
+        // Send scraping request using fetch
+        fetch('{% url "start_scraping" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken 
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            clearInterval(interval);
+            progressBar.style.width = '100%';
+            progressBar.setAttribute('aria-valuenow', 5000);
+            progressPercentage.innerText = '100%';
+            setTimeout(() => {
+                progressBarContainer.style.display = 'none';
+            }, 500);
+            const resultCard = document.getElementById('resultCard');
+            const scrapingResult = document.getElementById('scrapingResult');
+
+            if (data.is_success) {
+                scrapingResult.innerHTML = `<div class="alert alert-success">Scraped ${data.total_jobs_found} Jobs! Stored ${data.total_stored} Jobs.</div>`;
+            } else {
+                scrapingResult.innerHTML = `<div class="alert alert-danger">Invalid URL: ${data.url}</div>`;
+            }
+
+            resultCard.style.display = 'block'; 
+        })
+        .catch(error => {
+            clearInterval(interval); 
+            progressBarContainer.style.display = 'none';
+            document.getElementById('scrapingResult').innerHTML = '<div class="alert alert-danger">An error occurred during scraping.</div>';
+            document.getElementById('resultCard').style.display = 'block'; 
+            console.error('Error:', error);
+        });
+    });
+</script>
+{% endblock %}

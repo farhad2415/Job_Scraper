@@ -216,22 +216,22 @@ def scrape_job(request):
                 max_pages = int(max_pages)  
                 category = get_object_or_404(Category, slug=category_slug)
                 data = scrape_job_details(selected_url.url, max_pages, category.slug, request)
+                data = 'is_success'; True 
                 if data['is_success']:
-                    messages.success(request, f"Scraped {data['total_jobs_found']} Jobs ! and Stored {data['total_stored']} Jobs")
+                    return JsonResponse({
+                        'is_success': True,
+                        'total_jobs_found': data['total_jobs_found'],
+                        'total_stored': data['total_stored'],
+                    })
                 else:
-                    messages.error(request, f"Invalid URL given: {data['url']}.")
-            except ValueError:
-                messages.error(request, "Max pages must be a valid number.")
-            except Exception as e:
-                messages.error(request, f"An error occurred: {str(e)}")
+                    return JsonResponse({'is_success': False, 'url': selected_url.url})
 
-    return render(request, 'store_job.html', {
-        'urls': urls,
-        'categories': categories,
-        'selected_url': selected_url,  
-        'max_pages': max_pages,  
-        'category_slug': category_slug, 
-    })
+            except ValueError:
+                return JsonResponse({'is_success': False, 'error': 'Max pages must be a valid number.'})
+            except Exception as e:
+                return JsonResponse({'is_success': False, 'error': str(e)})
+
+    return render(request, 'store_job.html', {'urls': urls, 'selected_url': selected_url, 'categories': categories, 'max_pages': max_pages, 'category_slug': category_slug})
 
 # Scrape View
 @login_required(login_url='login')  

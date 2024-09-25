@@ -8346,3 +8346,27 @@ textarea.form-control {
         border: 1px solid transparent;
         background: #fbceb5;
         color: #fff; }
+
+
+
+
+.progress {
+    height: 30px; 
+    background-color: #000000; 
+    border-radius: 5px;
+    position: relative;
+    top: 0px;
+}
+
+.progress-bar {
+    height: 100%;
+    transition: width 0.4s; 
+}
+
+.dog {
+    position: absolute;
+    bottom: -30px; 
+    left: 0; 
+    font-size: 20px;
+    transition: transform 0.1s ;
+}
