@@ -13,6 +13,7 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout, authenticate, login as auth_login
+import re
  
 def scrape_job_details(url, max_pages, category_slug, request):
     base_url = url.strip()
@@ -195,6 +196,88 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
+
+    if base_url == "https://www.posao.hr/djelatnosti/":
+        total_stored = 0
+        total_skipped_jobs = 0
+        data = {
+            "is_success": False,
+            'url': base_url,
+            'category_slug': category_slug,
+        }
+        total_job_found = 0
+        try:
+            for page_number in range(1, max_pages + 1):
+                url = f"{base_url}{category_slug}"
+                driver.get(url)
+                page_source = BeautifulSoup(driver.page_source, features="lxml")
+                if "Nema oglasa" in page_source.get_text():
+                    print(f"No more pages found after page {page_number-1}.")
+                    break
+               
+                # intro a get link and open in new tab and get details
+                job_grid_elements = page_source.find_all("div", class_='intro')
+                if not job_grid_elements:
+                    print(f"No job elements found on page {page_number}.")
+                    break
+                total_job_found = len(job_grid_elements)
+                for job_element in job_grid_elements:
+                    job_title = job_element.find("strong").get_text(strip=True) if job_element.find("strong") else "Position not found"
+                    job_link = job_element.find("a", href=True)['href'] if job_element.find("a", href=True) else None
+                    if not job_link:
+                        print("Job URL not found, skipping.")
+                        data['total_skipped_jobs'] += 1
+                        continue
+                    job_details_url = f"{job_link}"
+                    driver.get(job_details_url)
+                    job_details_page = BeautifulSoup(driver.page_source, 'lxml')    
+                    if "not found" in job_details_page.get_text():
+                        print("Job details not found, skipping.")
+                        data['total_skipped_jobs'] += 1
+                        continue
+                    job_details_div = job_details_page.find_all("div", class_="ad_mask")
+                    position_name = job_details_div[0].find("h1").get_text(strip=True) if job_details_div[0].find("h1") else "Position not found"
+                    company_name = job_details_div[0].find("div", class_="single_job_ad_right").get_text(strip=True) if job_details_div[0].find("div", class_="single_job_ad_right") else "Company not found"
+                    job_location_divs = job_details_div[0].find_all("div", class_="single_job_ad_right")
+                    job_location = job_location_divs[2].get_text(strip=True) if len(job_location_divs) > 1 else "Location not found"
+                    phone_number = job_details_page.find(text=re.compile(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}')).strip() if job_details_page.find(text=re.compile(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}')) else "Phone not found"
+                    email = job_details_page.find(text=re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')).strip() if job_details_page.find(text=re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')) else "Email not found"
+                    job_category = Category.objects.get(slug=category_slug).name
+                    source = "Posao.hr"
+                    job_type = job_details_div[0].find("div", class_="single_job_ad_right").get_text(strip=True) if job_details_div[0].find("div", class_="single_job_ad_right") else "Type not found"
+                    job_description_div = job_details_page.find("div", id="oglas")
+                    if job_description_div:
+                        job_description = job_description_div.get_text(separator="\n",strip=True)
+                        job_description = job_description.replace('\n', ' ')
+                    else:
+                        job_description = "Job description not found"
+
+                    if not Job.objects.filter(position=job_title, company=company_name, location=job_location, job_type=job_type, user=request.user).exists():
+                        scraped_data = Job(position=job_title, company=company_name, location=job_location, job_type=job_type, 
+                                           description=job_description, job_posted=job_posting_date, job_link=job_details_url, source=source, job_category=category_name, user=request.user, salary=salary)
+                        scraped_data.save()
+                        total_stored += 1
+                    else:
+                        total_skipped_jobs += 1
+                data = {
+                    "is_success": True,
+                    'url': url,
+                    'total_jobs_found': total_job_found,
+                    'total_stored': total_stored,
+                   ' total_skipped_jobs': total_skipped_jobs
+                }
+            return data
+        except Exception as e:
+            print(f"An error occurred: {e}")
+        finally:
+            try:
+                driver.quit()
+            except WebDriverException as e:
+                print(f"WebDriverException: {e}")
+            except PermissionError as e:
+                print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
+            except Exception as e:
+                print(f"An unexpected error occurred while quitting the driver: {e}")         
 # Scrape Job
 @login_required(login_url='login')
 def scrape_job(request):
@@ -224,7 +307,6 @@ def scrape_job(request):
                     })
                 else:
                     return JsonResponse({'is_success': False, 'url': selected_url.url})
-
             except ValueError:
                 return JsonResponse({'is_success': False, 'error': 'Max pages must be a valid number.'})
             except Exception as e:
