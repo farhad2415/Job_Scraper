@@ -9,3 +9,5 @@ db.sqlite3
 
 # static css js scss
  
+ .env.local
+ .env.production
