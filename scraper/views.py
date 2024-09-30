@@ -208,7 +208,13 @@ def scrape_job_details(url, max_pages, category_slug, request):
         total_job_found = 0
         try:
             for page_number in range(1, max_pages + 1):
-                url = f"{base_url}{category_slug}"
+                # url = f"{base_url}{category_slug}"
+                # driver.get(url)
+                if page_number == 1:
+                    url = f"{base_url}{category_slug}"
+                else:
+                    url = f"{base_url}{category_slug}/stranica/{page_number}/"
+                
                 driver.get(url)
                 page_source = BeautifulSoup(driver.page_source, features="lxml")
                 if "Nema oglasa" in page_source.get_text():
@@ -240,11 +246,10 @@ def scrape_job_details(url, max_pages, category_slug, request):
                     company_name = job_details_div[0].find("div", class_="single_job_ad_right").get_text(strip=True) if job_details_div[0].find("div", class_="single_job_ad_right") else "Company not found"
                     job_location_divs = job_details_div[0].find_all("div", class_="single_job_ad_right")
                     job_location = job_location_divs[2].get_text(strip=True) if len(job_location_divs) > 1 else "Location not found"
-                    phone_number = job_details_page.find(text=re.compile(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}')).strip() if job_details_page.find(text=re.compile(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}')) else "Phone not found"
+                    # phone_number = job_details_page.find(text=re.compile(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}')).strip() if job_details_page.find(text=re.compile(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}')) else "Phone not found"
                     email = job_details_page.find(text=re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')).strip() if job_details_page.find(text=re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')) else "Email not found"
                     job_category = Category.objects.get(slug=category_slug).name
                     source = "Posao.hr"
-                    job_type = job_details_div[0].find("div", class_="single_job_ad_right").get_text(strip=True) if job_details_div[0].find("div", class_="single_job_ad_right") else "Type not found"
                     job_description_div = job_details_page.find("div", id="oglas")
                     if job_description_div:
                         job_description = job_description_div.get_text(separator="\n",strip=True)
@@ -252,9 +257,13 @@ def scrape_job_details(url, max_pages, category_slug, request):
                     else:
                         job_description = "Job description not found"
 
-                    if not Job.objects.filter(position=job_title, company=company_name, location=job_location, job_type=job_type, user=request.user).exists():
-                        scraped_data = Job(position=job_title, company=company_name, location=job_location, job_type=job_type, 
-                                           description=job_description, job_posted=job_posting_date, job_link=job_details_url, source=source, job_category=category_name, user=request.user, salary=salary)
+                    # from "sidebar" find "company_link" and get href
+                    website_element = job_details_page.find_all("div", id="sidebar")[0]
+                    website_div = website_element.find("div", class_="company_link")
+                    website_link = website_div.find("a", href=True)['href'] if website_div.find("a", href=True) else "Website not found"
+
+                    if not Job.objects.filter(position=position_name, company=company_name, location=job_location, user=request.user).exists():
+                        scraped_data = Job(position=position_name, company=company_name, location=job_location, email=email, description=job_description, job_link=job_details_url, source=source, job_category=job_category, user=request.user, website=website_link)
                         scraped_data.save()
                         total_stored += 1
                     else:

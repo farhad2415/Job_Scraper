@@ -31,6 +31,7 @@
                 <th>Phone Number</th>
                 <th>Job Link</th>
                 <th>Description</th>
+                <th>Website</th>
                 <th>Job Scraping Date</th>
                 <th>Source</th>
             </tr>
@@ -67,7 +68,17 @@
                     {% endif %}
                 </td>
                 <td><a href="{{ job.job_link }}" target="_blank">Link</a></td>
-                <td>{{ job.description }}</td>
+                <!-- <td>{{ job.description }}</td> -->
+                <td>
+                    <div class="job-description">
+                        <span class="short-description">{{ job.description|slice:":200" }}{% if job.description|length > 200 %}...{% endif %}</span>
+                        
+                        {% if job.description|length > 200 %}
+                            <a href="javascript:void(0);" class="show-more" data-bs-toggle="modal" data-bs-target="#descriptionModal" onclick="setModalContent('{{ job.description|escapejs }}');">Show More</a>
+                        {% endif %}
+                    </div>
+                </td>
+                <td><a href="{{ job.website }}" target="_blank">{{ job.website }}</a></td>
                 <td>{{ job.created_at }}</td>
                 <td>{{ job.source }}</td>
             </tr>
@@ -122,7 +133,27 @@
                     </ul>
             </nav>
         </div>
+        <div class="modal fade" id="descriptionModal" tabindex="-1" aria-labelledby="descriptionModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="descriptionModalLabel">Job Description</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="modalDescriptionContent">
+                  <!-- Full description will be dynamically loaded here -->
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+              </div>
+            </div>
+          </div>
     </table>
 </div>
-
+<script>
+    function setModalContent(description) {
+        document.getElementById('modalDescriptionContent').innerText = description;
+    }
+</script>
 {% endblock %}
