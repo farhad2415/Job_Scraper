@@ -2,19 +2,36 @@ from pathlib import Path
 from django.contrib.messages import constants as messages
 # import os
 import os
+import environ
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 import sentry_sdk
 
+# Configure Django App for Development and Production Environment
+env = environ.Env()
+ENVIRONMENT = env.str('ENVIRONMENT', default='production')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
+if ENVIRONMENT == 'development':
+    environ.Env.read_env(os.path.join(BASE_DIR, '.env.local'))
+else:
+    environ.Env.read_env(os.path.join(BASE_DIR, '.env.production'))
 
-# SECURITY WARNING: keep the secret key used in production secret!
+DEBUG = env.bool('DEBUG', False)
+
 SECRET_KEY = 'django-insecure-8&^eqr@1o!l)#a3x25dhuz1^q#g513%&ko7p4ucxr-$#$7heev'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+
+if ENVIRONMENT == 'development':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+        'default': env.db('DATABASE_URL', default='postgresql://job_farhad:123456789@localhost:5432/job_data')
+    }
 
 ALLOWED_HOSTS = ['*']
 
@@ -67,27 +84,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'job_scraper.wsgi.application'
-
-
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-    # postgresql
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.postgresql',
-    #     'NAME': 'job_data',
-    #     'USER': 'job_farhad',
-    #     'PASSWORD': '123456789',
-    #     'HOST': 'localhost',
-    #     'PORT': '5432',
-    # }
-
-}
 
 
 sentry_sdk.init(
