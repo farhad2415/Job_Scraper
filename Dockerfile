@@ -18,6 +18,11 @@ ARG ENV=production
 COPY db.sqlite3 /app/db.sqlite3
 
 RUN if [ "$ENV" = "local" ]; then echo "Using SQLite"; else rm -f /app/db.sqlite3; fi
+
+RUN if [ "$ENV" = "production" ]; then \
+        python manage.py makemigrations && \
+        python manage.py migrate; \
+    fi
 EXPOSE 8003
 
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8003"]
