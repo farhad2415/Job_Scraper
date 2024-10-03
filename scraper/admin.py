@@ -37,5 +37,5 @@ class JobResource(resources.ModelResource):
 class JobAdmin(ImportExportModelAdmin):
     resources_class = JobResource
     list_display = ('company', 'position', 'location', 'job_type', 'description', 'job_posted', 'job_link', 'source', 'job_category', 'user', 'salary')
-    search_fields = ('company', 'position', 'location', 'job_type', 'description', 'job_posted', 'job_link', 'source', 'job_category', 'user', 'salary')
+    search_fields = ('company', 'position', 'location', 'job_type', 'description', 'job_posted', 'job_link', 'source', 'job_category','salary')
     list_filter = ('company', 'position', 'location', 'job_type', 'description', 'job_posted', 'job_link', 'source', 'job_category', 'user', 'salary')

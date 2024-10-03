@@ -9,15 +9,14 @@ import sentry_sdk
 
 # Configure Django App for Development and Production Environment
 env = environ.Env()
-ENVIRONMENT = env.str('ENVIRONMENT', default='production')
+ENVIRONMENT = env.str('ENVIRONMENT', default='development')
 
 if ENVIRONMENT == 'development':
     environ.Env.read_env(os.path.join(BASE_DIR, '.env.local'))
 else:
     environ.Env.read_env(os.path.join(BASE_DIR, '.env.production'))
 
-DEBUG = env.bool('DEBUG', False)
-
+DEBUG = True 
 SECRET_KEY = 'django-insecure-8&^eqr@1o!l)#a3x25dhuz1^q#g513%&ko7p4ucxr-$#$7heev'
 
 
@@ -129,7 +128,8 @@ AUTH_USER_MODEL = 'auth.User'
 
 STATIC_URL = '/static/'
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+# STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = BASE_DIR / 'static'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

@@ -38,7 +38,7 @@ class Job(models.Model):
     job_link = models.URLField(max_length=255, blank=True, null=True)
     source = models.CharField(max_length=255, blank=True, null=True)
     job_category = models.CharField(max_length=255, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE, blank=True, null=True)
 
     def __str__(self):  

@@ -196,7 +196,6 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
-
     if base_url == "https://www.posao.hr/djelatnosti/":
         total_stored = 0
         total_skipped_jobs = 0
@@ -286,7 +285,46 @@ def scrape_job_details(url, max_pages, category_slug, request):
             except PermissionError as e:
                 print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
             except Exception as e:
-                print(f"An unexpected error occurred while quitting the driver: {e}")         
+                print(f"An unexpected error occurred while quitting the driver: {e}")      
+    if base_url == "https://www.zaplata.bg/":
+        total_stored = 0
+        total_skipped_jobs = 0
+        data = {
+            "is_success": False,
+            'url': base_url,
+            'category_slug': category_slug,
+        }
+        try:
+            for page_number in range(1, max_pages + 1):
+                if page_number == 1:
+                    url = f"{base_url}{category_slug}"
+                else:
+                    url = f"{base_url}{category_slug}/page:{page_number}/"
+                driver.get(url)
+                page_source = BeautifulSoup(driver.page_source, features="html.parser")
+                job_grid_elements = page_source.find("div", class_='grid')
+                if not job_grid_elements:
+                    print(f"No job elements found on page {page_number}.")
+                    break
+                total_job_found = len(job_grid_elements)
+                
+        except Exception as e:
+            print(f"An error occurred: {e}")
+        finally:
+            try:
+                driver.quit()
+            except WebDriverException as e:
+                print(f"WebDriverException: {e}")
+            except PermissionError as e:
+                print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
+            except Exception as e:
+                print(f"An unexpected error occurred while quitting the driver: {e}")
+    else:
+        print("Invalid URL")
+        return data
+
+
+
 # Scrape Job
 @login_required(login_url='login')
 def scrape_job(request):
