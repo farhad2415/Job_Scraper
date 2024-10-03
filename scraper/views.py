@@ -20,10 +20,10 @@ def scrape_job_details(url, max_pages, category_slug, request):
     category_slug = category_slug.strip()
     category_name = Category.objects.get(slug=category_slug).name
     chrome_options = Options()
-    chrome_options.add_argument('--no-sandbox')
+    # chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--disable-gpu')
+    # chrome_options.add_argument('--headless')
+    # chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--remote-debugging-port=9222')
 
     service = Service(ChromeDriverManager().install())
@@ -302,12 +302,120 @@ def scrape_job_details(url, max_pages, category_slug, request):
                     url = f"{base_url}{category_slug}/page:{page_number}/"
                 driver.get(url)
                 page_source = BeautifulSoup(driver.page_source, features="html.parser")
-                job_grid_elements = page_source.find("div", class_='grid')
+                job_grid_elements = page_source.find_all("div", class_='grid')
                 if not job_grid_elements:
                     print(f"No job elements found on page {page_number}.")
                     break
-                total_job_found = len(job_grid_elements)
-                
+                else:
+                    total_job_found = len(job_grid_elements)
+                    for job_element in job_grid_elements:
+                        main_div = job_element.find("div", class_="main")
+                        if main_div:
+                            title_div = main_div.find("div", class_="title")
+                            if title_div and title_div.find("a", href=True):
+                                job_title = title_div.find("a").get_text(strip=True)
+                                job_url = title_div.find("a", href=True)['href']
+                                driver.get(job_url)
+                                # html_content = {
+                                #     <div class="params" bis_skin_checked="1">
+                                #     <div bis_skin_checked="1">
+                                #     <a href="https://www.zaplata.bg/sofia/" class="location"><font style="vertical-align: inherit;"><font style="vertical-align: inherit;">Sofia city</font></font></a> </div>
+                                #     <div bis_skin_checked="1">
+                                #     <a class="experts" href="https://www.zaplata.bg/sluzhiteli-rabotnitsi/"><font style="vertical-align: inherit;"><font style="vertical-align: inherit;">Employees/Workers</font></font></a><br>
+                                #     </div>
+                                #     <div bis_skin_checked="1"><a href="https://www.zaplata.bg/palen-raboten-den/" class="fulltime"><font style="vertical-align: inherit;"><font style="vertical-align: inherit;">Full Working Day</font></font></a></div>
+                                #     <div bis_skin_checked="1"><a href="https://www.zaplata.bg/postoianna/" class="postoianna"><font style="vertical-align: inherit;"><font style="vertical-align: inherit;">Permanent</font></font></a></div>
+                                #     <div bis_skin_checked="1">
+                                #     <span data-link="https://www.zaplata.bg/search?q=&amp;l=&amp;price=2060%3B2190&amp;go=&amp;search=ТЪРСИ" class="clever-link salary"><font style="vertical-align: inherit;"><font style="vertical-align: inherit;">
+                                #     Salary from </font></font><strong><font style="vertical-align: inherit;"><font style="vertical-align: inherit;">BGN 2060</font></font></strong><font style="vertical-align: inherit;"><font style="vertical-align: inherit;"> 
+                                #     to </font></font><strong><font style="vertical-align: inherit;"><font style="vertical-align: inherit;">BGN 2190</font></font></strong><font style="vertical-align: inherit;"><font style="vertical-align: inherit;"> 
+                                #     (Gross)
+                                #     </font></font></span>
+                                #     </div>
+                                #     </div>
+                                # }
+                                job_page_source = BeautifulSoup(driver.page_source, features="html.parser") 
+                                job_description_div = job_page_source.find("div", class_="advert_description")
+                                job_details_div = job_page_source.find("div", class_="info")
+                                job_posting_date_data = job_details_div.find("div", class_="date")
+                                if job_posting_date_data:
+                                    job_posting_date = job_posting_date_data.get_text(strip=True)
+                                    strong_tags = job_details_div.find_all("strong")
+                                    if strong_tags:
+                                        job_posting_date_text = job_posting_date.replace(strong_tags[0].get_text(strip=True), "")
+                                        job_posting_date = job_posting_date_text
+                                else:
+                                    job_posting_date = "Date not found"
+                                # job_location = job_details_div.find("a", class_="location").get_text(strip=True) if job_details_div.find("a", class_="location") else "Location not found"
+                                job_type = job_details_div.find("a", class_="fulltime").get_text(strip=True) if job_details_div.find("a", class_="fulltime") else "Type not found"
+                                job_category = Category.objects.get(slug=category_slug).name
+                                source = "Zaplata.bg"
+                                salary_span_data= job_details_div.find("span", class_="clever-link salary")
+                                if salary_span_data:
+                                    salary_from = salary_span_data.find_all("strong")[0].get_text(strip=True) if salary_span_data.find_all("strong") else "Salary not found"
+                                    salary_to = salary_span_data.find_all("strong")[1].get_text(strip=True) if salary_span_data.find_all("strong") else "Salary not found"
+                                    salary = f"{salary_from} to {salary_to} (Gross)"
+#                                 #Fetch Company Name from span 
+# #                                 # html content about company= <div class="title" bis_skin_checked="1">
+#                                     # <strong><font style="vertical-align: inherit;"><font style="vertical-align: inherit;">TRADE AND LOGISTICS EXPERT</font></font></strong>
+#                                     # <span><font style="vertical-align: inherit;"><font style="vertical-align: inherit;">
+#                                     # DEFENSE CAPITAL INDUSTRY (DKI) LTD
+#                                     # </font></font></span>
+#                                     # </div>
+#                                 company_name = job_details_div.find("div", class_="title").find("span").get_text(strip=True) if job_details_div.find("div", class_="title").find("span") else "Company not found"
+                                company_details_div = job_page_source.find("div", class_="company")
+                                if company_details_div:
+                                    company_name_divs = company_details_div.find_all("div", class_="comanyName")
+                                    
+                                    if len(company_name_divs) >= 2:
+                                        company_name = company_name_divs[1].find("a").get_text(strip=True) if company_name_divs[1].find("a") else "Company name not found"
+                                        profile_link = company_name_divs[1].find("a", href=True)['href'] if company_name_divs[1].find("a", href=True) else "Website not found"
+                                    else:
+                                        company_name = "Company name not found"
+                                        profile_link = "Website not found"
+                                else:
+                                    company_name = "Company not found"
+                                    profile_link = "Website not found"
+                                # make new tab and get website link
+                                driver.execute_script(f"window.open('{profile_link}', '_blank')")
+                                driver.switch_to.window(driver.window_handles[-1])
+                                driver.get(profile_link)
+                                company_contact_page = BeautifulSoup(driver.page_source, features="html.parser")
+                                contact_info_div = company_contact_page.find("div", class_="columns3 MT30")
+                                address = "Address not found"
+                                phone = "Phone not found"
+                                website_link = "Website not found"
+                                address_div = contact_info_div.find("h3", class_="address")
+                                if address_div:
+                                    address = address_div.find("div").get_text(strip=True)
+                                phone_div = contact_info_div.find("h3", class_="phone")
+                                if phone_div:
+                                    phone = phone_div.find("div").get_text(strip=True)
+                                website_div = contact_info_div.find("h3", class_="website")
+                                if website_div:
+                                    website_span = website_div.find("div").find("span", class_="clever-link-blank")
+                                    if website_span:
+                                        website_link = website_span['data-link']  
+                                driver.close()
+                                driver.switch_to.window(driver.window_handles[0])
+                                if job_description_div:
+                                    job_description = job_description_div.get_text(separator="\n", strip=True)
+                                else:
+                                    job_description = "Description not found"
+                                if not Job.objects.filter(position=job_title, company=company_name, location=address, user=request.user).exists():
+                                    scraped_data = Job(position=job_title, company=company_name, location=address, description=job_description, job_posted=job_posting_date, job_link=job_url, job_type=job_type, source=source, job_category=job_category, user=request.user, salary=salary, website=website_link, phone_number=phone)
+                                    scraped_data.save()
+                                    total_stored += 1
+                                else:
+                                    total_skipped_jobs += 1
+                            data = {
+                                "is_success": True,
+                                'url': url,
+                                'total_jobs_found': total_job_found,
+                                'total_stored': total_stored,
+                                'total_skipped_jobs': total_skipped_jobs
+                            }
+            return data
         except Exception as e:
             print(f"An error occurred: {e}")
         finally:
@@ -319,9 +427,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
-    else:
-        print("Invalid URL")
-        return data
+    return data
 
 
 
