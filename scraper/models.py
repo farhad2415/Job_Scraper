@@ -29,7 +29,6 @@ class Job(models.Model):
     phone_number = models.CharField(max_length=255, blank=True, null=True)
     email= models.EmailField(max_length=255, blank=True, null=True)
     website = models.URLField(max_length=255, blank=True, null=True)
-    # vacancy = models.CharField(max_length=255, blank=True, null=True)
     salary = models.CharField(max_length=255, blank=True, null=True)
     location = models.CharField(max_length=255, blank=True, null=True)
     job_type = models.CharField(max_length=255, blank=True, null=True)
