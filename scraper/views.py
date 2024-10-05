@@ -337,10 +337,11 @@ def scrape_job_details(url, max_pages, category_slug, request):
                                     salary = f"not found"
                                 company_details_div = job_page_source.find("div", class_="company")
                                 if company_details_div:
-                                    company_name_divs = company_details_div.find("div", class_="comanyName")
+                                    company_name_divs = company_details_div.find_all("div", class_="comanyName")
+                                    
                                     if len(company_name_divs) >= 2:
-                                        company = company_name_divs[1].find("a").get_text(strip=True) if company_name_divs[1].find("a") else "not found"
-                                        profile_link = company_name_divs[1].find("a", href=True)['href'] if company_name_divs[1].find("a", href=True) else "not found"
+                                        company = company_name_divs[1].find("a").get_text(strip=True) if company_name_divs[1].find("a") else "Company name not found"
+                                        profile_link = company_name_divs[1].find("a", href=True)['href'] if company_name_divs[1].find("a", href=True) else "Website not found"
                                     else:
                                         company = "Company name not found"
                                         profile_link = "Website not found"
