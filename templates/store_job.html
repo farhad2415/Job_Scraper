@@ -144,8 +144,7 @@
             if (data.is_success) {
                 scrapingResult.innerHTML = `<div class="alert alert-success">Scraped ${data.total_jobs_found} Jobs! Stored ${data.total_stored} Jobs.</div>`;
             } else {
-                // if scraping failed 
-                scrapingResult.innerHTML = `<div class="alert alert-danger">Scraped ${data.total_jobs_found} Jobs! Stored ${data.total_stored} Jobs.</div>`;
+                scrapingResult.innerHTML = `<div class="alert alert-danger">Scrape Failed! ${data.error_message}</div>`;
             }
 
             resultCard.style.display = 'block'; 

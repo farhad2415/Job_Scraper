@@ -7,7 +7,7 @@ from .models import AvilableUrl, Job, Category
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.contrib import messages
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import WebDriverException, TimeoutException
 from django.shortcuts import render, redirect
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -67,7 +67,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 job_grid_elements = page_source.find_all("div", class_='article-txt-wrap')
                 if not job_grid_elements:
                     print(f"No job elements found on page {page_number}.")
-                    break
+                    break 
                 for job_element in job_grid_elements:
                     job_title = job_element.find("h2").get_text(strip=True) if job_element.find("h2") else "Position not found"
                     job_url = job_element.find("a", href=True)['href'] if job_element.find("a", href=True) else None
@@ -110,17 +110,18 @@ def scrape_job_details(url, max_pages, category_slug, request):
                                             description=description, job_posted=job_posting_date, job_link=job_details_url, source=source, job_category=category_name, user=request.user, phone_number=phone_number)
                             scraped_data.save()
                         else:
+                            # if job already exists, skip it and increment the total_skipped_jobs counter and continue to the next job
                             total_skipped_jobs += 1
                     except Exception as e:
-                        print(f"Phone No Avilable: {e}")
+                        print(f"{e}")
                         continue
-                    data = {
-                        "is_success": True,
-                        'url': url,
-                        'total_jobs_found': len(job_grid_elements),
-                        'total_stored': Job.objects.filter(user=request.user).count(),
-                        'total_skipped_jobs': total_skipped_jobs
-                    }
+                data = {
+                    "is_success": True,
+                    'url': url,
+                    'total_jobs_found': len(job_grid_elements),
+                    'total_stored': len(job_grid_elements) - total_skipped_jobs,
+                    'total_skipped_jobs': total_skipped_jobs
+                }
         except Exception as e:
             print(f"An error occurred: {e}")
         finally:
@@ -133,7 +134,6 @@ def scrape_job_details(url, max_pages, category_slug, request):
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
     if base_url == "https://jobzz.ro/":
-
         total_stored = 0
         total_skipped_jobs = 0
         data = {
@@ -144,7 +144,10 @@ def scrape_job_details(url, max_pages, category_slug, request):
         total_job_found = 0
         try:
             for page_number in range(1, max_pages + 1):
-                url = f"{base_url}{category_slug}_{page_number}.html"
+                if page_number == 1:
+                    url = f"{base_url}{category_slug}.html"
+                else:
+                    url = f"{base_url}{category_slug}_{page_number}.html"
                 driver.get(url)
                 page_source = BeautifulSoup(driver.page_source, features="lxml")
                 
@@ -155,7 +158,6 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 if not job_grid_elements:
                     print(f"No job elements found on page {page_number}.")
                     break
-                total_job_found = len(job_grid_elements)
                 for job_element in job_grid_elements:
                     job_title = job_element.find("span", class_="title").get_text(strip=True) if job_element.find("span", class_="title") else "Position not found"
                     job_url = job_element['href'] if job_element else None
@@ -165,24 +167,34 @@ def scrape_job_details(url, max_pages, category_slug, request):
                         continue
                     job_details_url = f"{job_url}"
                     driver.get(job_details_url)
-                    job_details_page = BeautifulSoup(driver.page_source, 'lxml')
-                    salary = job_details_page.find("span", id="price").get_text(strip=True) if job_details_page.find("span", id="price") else "Salary not found"
-                    #location_city by id
-                    job_location = job_details_page.find("span", id="location_city").get_text(strip=True) if job_details_page.find("span", id="location_city") else "Location not found"
-                    source = "Jobzz.ro"
-                    company_name = job_details_page.find("div", class_="account_right").get_text(strip=True) if job_details_page.find("div", class_="account_right") else "Company not found"
-                    category_name = Category.objects.get(slug=category_slug).name
-                    job_posting_date = job_details_page.find("div", class_="info_extra_details").get_text(strip=True) if job_details_page.find("div", class_="info_extra_details") else "Date not found"
-                    job_type = job_details_page.find("span", id="job_type").get_text(strip=True) if job_details_page.find("span", id="job_type") else "Type not found"
-                    job_description = job_details_page.find("p", id="paragraph").get_text(separator=" ", strip=True) if job_details_page.find("p", id="paragraph") else "Description not found"
-
-                    if not Job.objects.filter(position=job_title, company=company_name, location=job_location, job_type=job_type, user=request.user).exists():
-                        scraped_data = Job(position=job_title, company=company_name, location=job_location, job_type=job_type, 
-                                           description=job_description, job_posted=job_posting_date, job_link=job_details_url, source=source, job_category=category_name, user=request.user, salary=salary)
-                        scraped_data.save()
-                        total_stored += 1
-                    else:
-                        total_skipped_jobs += 1
+                    # job_details_page = BeautifulSoup(driver.page_source, 'lxml')
+                    try:
+                        wait = WebDriverWait(driver, 10)
+                        try:
+                            show_phone_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#phone_holder")))
+                            show_phone_button.click()
+                            time.sleep(2)
+                            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#phone_number")))
+                        except TimeoutException:
+                            print("no number")
+                        job_details_page = BeautifulSoup(driver.page_source, 'lxml')
+                        salary = job_details_page.find("span", id="price").get_text(strip=True) if job_details_page.find("span", id="price") else "Salary not found"
+                        #location_city by id
+                        job_location = job_details_page.find("span", id="location_city").get_text(strip=True) if job_details_page.find("span", id="location_city") else "not found"
+                        phone_number = job_details_page.find("span", id="phone_number").get_text(strip=True) if job_details_page.find("span", id="phone_number") else None
+                        source = "Jobzz.ro"
+                        company_name = job_details_page.find("div", class_="account_right").get_text(strip=True) if job_details_page.find("div", class_="account_right") else "not found"
+                        category_name = Category.objects.get(slug=category_slug).name
+                        job_posting_date = job_details_page.find("div", class_="info_extra_details").get_text(strip=True) if job_details_page.find("div", class_="info_extra_details") else "Date not found"
+                        job_type = job_details_page.find("span", id="job_type").get_text(strip=True) if job_details_page.find("span", id="job_type") else None
+                        job_description = job_details_page.find("p", id="paragraph").get_text(separator=" ", strip=True) if job_details_page.find("p", id="paragraph") else "Description not found"
+                        if not Job.objects.filter(position=job_title, company=company_name, location=job_location, job_type=job_type, user=request.user).exists():
+                            scraped_data = Job(position=job_title, company=company_name, location=job_location, salary=salary, phone_number=phone_number, description=job_description, job_posted=job_posting_date, job_link=job_details_url, source=source, job_category=category_name, user=request.user)
+                            scraped_data.save()
+                        else:
+                            total_skipped_jobs += 1
+                    except Exception as e:
+                        print(f"{e}")
                 data = {
                     "is_success": True,
                     'url': url,
@@ -213,8 +225,6 @@ def scrape_job_details(url, max_pages, category_slug, request):
         total_job_found = 0
         try:
             for page_number in range(1, max_pages + 1):
-                # url = f"{base_url}{category_slug}"
-                # driver.get(url)
                 if page_number == 1:
                     url = f"{base_url}{category_slug}"
                 else:
@@ -225,13 +235,10 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 if "Nema oglasa" in page_source.get_text():
                     print(f"No more pages found after page {page_number-1}.")
                     break
-               
-                # intro a get link and open in new tab and get details
                 job_grid_elements = page_source.find_all("div", class_='intro')
                 if not job_grid_elements:
                     print(f"No job elements found on page {page_number}.")
                     break
-                total_job_found = len(job_grid_elements)
                 for job_element in job_grid_elements:
                     job_title = job_element.find("strong").get_text(strip=True) if job_element.find("strong") else "Position not found"
                     job_link = job_element.find("a", href=True)['href'] if job_element.find("a", href=True) else None
@@ -244,25 +251,28 @@ def scrape_job_details(url, max_pages, category_slug, request):
                     job_details_page = BeautifulSoup(driver.page_source, 'lxml')    
                     if "not found" in job_details_page.get_text():
                         print("Job details not found, skipping.")
-                        data['total_skipped_jobs'] += 1
                         continue
                     job_details_div = job_details_page.find_all("div", class_="ad_mask")
                     position_name = job_details_div[0].find("h1").get_text(strip=True) if job_details_div[0].find("h1") else "Position not found"
                     company_name = job_details_div[0].find("div", class_="single_job_ad_right").get_text(strip=True) if job_details_div[0].find("div", class_="single_job_ad_right") else "Company not found"
                     job_location_divs = job_details_div[0].find_all("div", class_="single_job_ad_right")
-                    job_location = job_location_divs[2].get_text(strip=True) if len(job_location_divs) > 1 else "Location not found"
+                    job_location = job_location_divs[2].get_text(strip=True) if len(job_location_divs) > 2 else "not found"
+                    salary = job_location_divs[3].get_text(strip=True) if len(job_location_divs) > 4 else "not found"
                     # phone_number = job_details_page.find(text=re.compile(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}')).strip() if job_details_page.find(text=re.compile(r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}')) else "Phone not found"
                     email = job_details_page.find(text=re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')).strip() if job_details_page.find(text=re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')) else "Email not found"
                     job_category = Category.objects.get(slug=category_slug).name
                     source = "Posao.hr"
-                    job_description_div = job_details_page.find("div", id="oglas")
+                    job_description_div = job_details_page.find("section", class_="radial_single_job")
                     if job_description_div:
                         job_description = job_description_div.get_text(separator="\n",strip=True)
                         job_description = job_description.replace('\n', ' ')
                     else:
-                        job_description = "Job description not found"
-
-                    # from "sidebar" find "company_link" and get href
+                        job_description_div_alt = job_details_page.find("div", class_="glavniDio")
+                        if job_description_div_alt:
+                            job_description = job_description_div_alt.get_text(separator="\n",strip=True)
+                            job_description = job_description.replace('\n', ' ')
+                        else:
+                            job_description = "not found"
                     website_element = job_details_page.find_all("div", id="sidebar")[0]
                     website_div = website_element.find("div", class_="company_link")
                     website_link = website_div.find("a", href=True)['href'] if website_div.find("a", href=True) else "Website not found"
@@ -325,6 +335,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                                 job_page_source = BeautifulSoup(driver.page_source, features="html.parser") 
                                 job_description_div = job_page_source.find("div", class_="advert_description")
                                 job_details_div = job_page_source.find("div", class_="info")
+                                company_name = job_details_div.find("span").get_text(strip=True) if job_details_div.find("span") else "not found"
                                 job_posting_date_data = job_details_div.find("div", class_="date")
                                 if job_posting_date_data:
                                     job_posted = job_posting_date_data.find("div", class_="view").contents[0].strip()
@@ -341,19 +352,11 @@ def scrape_job_details(url, max_pages, category_slug, request):
                                     salary = f"{salary_from} to {salary_to} (Gross)"
                                 else:
                                     salary = f"not found"
-                                company_details_div = job_page_source.find("div", class_="company")
+                                company_details_div = job_page_source.find("div", class_="comanyName")
                                 if company_details_div:
-                                    company_name_divs = company_details_div.find_all("div", class_="comanyName")
-                                    
-                                    if len(company_name_divs) >= 2:
-                                        company = company_name_divs[1].find("a").get_text(strip=True) if company_name_divs[1].find("a") else "Company name not found"
-                                        profile_link = company_name_divs[1].find("a", href=True)['href'] if company_name_divs[1].find("a", href=True) else "Website not found"
-                                    else:
-                                        company = "Company name not found"
-                                        profile_link = "Website not found"
+                                    profile_link = company_details_div.find("a", href=True)['href']
                                 else:
-                                    company = "Company not found"
-                                    profile_link = "Website not found"
+                                    profile_link = "not found"
                                 driver.execute_script(f"window.open('{profile_link}', '_blank')")
                                 driver.switch_to.window(driver.window_handles[-1])
                                 driver.get(profile_link)
@@ -373,8 +376,8 @@ def scrape_job_details(url, max_pages, category_slug, request):
                                     job_description = job_description_div.get_text(separator="\n", strip=True)
                                 else:
                                     job_description = "Description not found"
-                                if not Job.objects.filter(position=postiion, company=company, location=location, user=request.user).exists():
-                                    scraped_data = Job(position=postiion, company=company, location=location, description=job_description, job_posted=job_posted, job_link=job_link, source=source, job_category=job_category, user=request.user, salary=salary, phone_number=phone_number, website=website)
+                                if not Job.objects.filter(position=postiion, company=company_name, location=location, user=request.user).exists():
+                                    scraped_data = Job(position=postiion, company=company_name, location=location, description=job_description, job_posted=job_posted, job_link=job_link, source=source, job_category=job_category, user=request.user, salary=salary, phone_number=phone_number, website=website)
                                     scraped_data.save()
                                     total_stored += 1
                                 else:
@@ -386,6 +389,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                                     'total_stored': total_stored,
                                     'total_skipped_jobs': total_skipped_jobs
                                 }
+                    return data
         except Exception as e:
             print(f"An error occurred: {e}")
         finally:

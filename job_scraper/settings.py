@@ -8,19 +8,18 @@ DEBUG = True
 SECRET_KEY = 'django-insecure-8&^eqr@1o!l)#a3x25dhuz1^q#g513%&ko7p4ucxr-$#$7heev'
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.postgresql',
-    #     'NAME': 'job_data',
-    #     'USER': 'job_farhad',
-    #     'PASSWORD': '123456789',
-    #     'HOST': '103.17.37.8',
-    #     'PORT': '5432',
-    # }
     'default': {
-    'ENGINE': 'django.db.backends.sqlite3',
-    'NAME': BASE_DIR / 'db.sqlite3',
-}
-
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'job_data',
+        'USER': 'job_farhad',
+        'PASSWORD': '123456789',
+        'HOST': '103.17.37.8',
+        'PORT': '5432',
+    }
+#     'default': {
+#     'ENGINE': 'django.db.backends.sqlite3',
+#     'NAME': BASE_DIR / 'db.sqlite3',
+# }
 }
 
 ALLOWED_HOSTS = ['*']
