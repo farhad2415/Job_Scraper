@@ -275,7 +275,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                             job_description = "not found"
                     website_element = job_details_page.find_all("div", id="sidebar")[0]
                     website_div = website_element.find("div", class_="company_link")
-                    website_link = website_div.find("a", href=True)['href'] if website_div.find("a", href=True) else "Website not found"
+                    website_link = website_div.find("a", href=True)['href'] if website_div.find("a", href=True) else "not found"
 
                     if not Job.objects.filter(position=position_name, company=company_name, location=job_location, user=request.user).exists():
                         scraped_data = Job(position=position_name, company=company_name, location=job_location, email=email, description=job_description, job_link=job_details_url, source=source, job_category=job_category, user=request.user, website=website_link)
@@ -323,7 +323,6 @@ def scrape_job_details(url, max_pages, category_slug, request):
                     print(f"No job elements found on page {page_number}.")
                     break
                 else:
-                    total_job_found = len(job_grid_elements)
                     for job_element in job_grid_elements:
                         main_div = job_element.find("div", class_="main")
                         if main_div:
@@ -365,7 +364,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                                 if contact_info_div:
                                     # Extract phone number
                                     phone_div = contact_info_div.find("h3", class_="phone")
-                                    phone_number = phone_div.find_next("div").get_text(strip=True) if phone_div else "Phone not found"
+                                    phone_number = phone_div.find_next("div").get_text(strip=True) if phone_div else None
                                     
                                     # Extract website
                                     website_span = contact_info_div.find("span", class_="clever-link-blank nowrap")
@@ -401,7 +400,91 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
-    return data
+    if base_url == "https://www.maltapark.com/jobs/category/":
+        total_stored = 0
+        total_skipped_jobs = 0
+        data = {
+            "is_success": False,
+            'url': base_url,
+            'category_slug': category_slug,
+        }
+        try:
+            for page_number in range(1, max_pages + 1):
+                if page_number == 1:
+                    url = f"{base_url}{category_slug}"
+                else:
+                    url = f"{base_url}{category_slug}/?page={page_number}"
+                
+                driver.get(url)
+                page_source = BeautifulSoup(driver.page_source, features="html.parser")
+                job_grid_elements_first = page_source.find("div", class_='ui items job unstackable listings')
+
+                # Check if job_grid_elements_first is None
+                if job_grid_elements_first is None:
+                    print(f"Job grid not found on page {page_number}. Terminating scraping.")
+                    data['is_success'] = total_stored > 0
+                    data['total_jobs_found'] = total_stored + total_skipped_jobs
+                    return data
+
+                job_grid_elements = job_grid_elements_first.find_all("div", class_='content clearfix')
+
+                # Check if no job elements found
+                if not job_grid_elements:
+                    print(f"No job elements found on page {page_number}. Terminating scraping.")
+                    data['is_success'] = total_stored > 0  # Set success based on whether any jobs were stored
+                    data['total_jobs_found'] = total_stored + total_skipped_jobs
+                    return data
+                
+                for job_element in job_grid_elements:
+                    title_div = job_element.find("a", class_="header")
+                    location_div = job_element.find("div", class_="extra").text
+                    location_text = location_div.strip()
+                    if title_div:
+                        postiion = title_div.get_text(strip=True)
+                        job_link = title_div['href']
+                        domain_link = 'https://www.maltapark.com'
+                        full_job_link = f"{domain_link}{job_link}"
+                        
+                        driver.get(full_job_link)
+                        job_page_source = BeautifulSoup(driver.page_source, features="html.parser") 
+                        job_details_div = job_page_source.find("div", class_="margin-bottom-1")
+                        company_name = job_details_div.find("h3", class_="company").get_text(strip=True) if job_details_div.find("h3", class_="company") else "not found"
+                        all_description = job_details_div.find_all('p', class_='ui segment whitebg shadowbox phone-nopanel')
+                        job_description = all_description[0].get_text(strip=True) if all_description else "not found"
+                    
+                        job_category = Category.objects.get(slug=category_slug).name
+                        source = "MaltaPark.com"
+                        job_posting_date = job_details_div.find_all("div", class_="labelvaluepair")[3].find("span").text
+                        
+                        if not Job.objects.filter(position=postiion, company=company_name, location=location_text, user=request.user).exists():
+                            scraped_data = Job(position=postiion, company=company_name, location=location_text, description=job_description, job_link=full_job_link, source=source, job_category=job_category, user=request.user, job_posted=job_posting_date)
+                            scraped_data.save()
+                            total_stored += 1
+                        else:
+                            total_skipped_jobs += 1
+
+                data = {
+                    "is_success": True,
+                    'url': url,
+                    'total_jobs_found': len(job_grid_elements),
+                    'total_stored': total_stored,
+                    'total_skipped_jobs': total_skipped_jobs
+                }
+            
+            return data  # Moved outside the loop
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            data['is_success'] = False
+            return data
+        finally:
+            try:
+                driver.quit()
+            except WebDriverException as e:
+                print(f"WebDriverException: {e}")
+            except PermissionError as e:
+                print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
+            except Exception as e:
+                print(f"An unexpected error occurred while quitting the driver: {e}")
 
 # Scrape Job
 @login_required(login_url='login')
