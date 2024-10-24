@@ -13,12 +13,6 @@ RUN apt-get update && apt-get install -y wget unzip && \
     rm google-chrome-stable_current_amd64.deb && \
     apt-get clean
 
-ARG ENV=production
-
-COPY db.sqlite3 /app/db.sqlite3
-
-RUN if [ "$ENV" = "local" ]; then echo "Using SQLite"; else rm -f /app/db.sqlite3; fi
-
 EXPOSE 8003
 
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8003"]
