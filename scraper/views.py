@@ -28,10 +28,10 @@ def scrape_job_details(url, max_pages, category_slug, request):
     category_slug = category_slug.strip()
     category_name = Category.objects.get(slug=category_slug).name
     chrome_options = Options()
-    chrome_options.add_argument('--no-sandbox')
+    # chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--disable-gpu')
+    # chrome_options.add_argument('--headless')
+    # chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--remote-debugging-port=9222')
 
     service = Service(ChromeDriverManager().install())
@@ -483,6 +483,82 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
+    if base_url == "https://alfred.com.mt/jobs?cat=":
+        total_stored = 0
+        total_skipped_jobs = 0
+        data = {
+            "is_success": False,
+            'url': base_url,
+            'category_slug': category_slug,
+        }
+        driver.get(base_url + category_slug)
+        last_height = driver.execute_script("return document.body.scrollHeight")
+        job__link = set()
+
+        while True:
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2)
+            new_height = driver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                break
+            last_height = new_height
+        page_source = BeautifulSoup(driver.page_source, features="html.parser")
+        job_grid_elements = page_source.find_all("div", class_='hidden sm:block')
+        job_grid_elements = job_grid_elements[1:]
+        for job_element in job_grid_elements:
+            job_link = job_element.find("a", href=True)['href']
+            main_link = 'https://alfred.com.mt'
+            full_job_link = f"{main_link}{job_link}"
+            job__link.add(full_job_link)
+        for job_link in job__link:
+            driver.get(job_link)
+            job_page_source = BeautifulSoup(driver.page_source, features="html.parser")
+            position = job_page_source.find("h1", class_="text-md md:text-lg font-bold").get_text(strip=True) 
+            job_details_div = job_page_source.find("div", class_="flex flex-col md:flex-row relative")
+            left_job_details = job_details_div.find("div", class_="flex-grow md:mr-5 mt-8")
+            right_job_details = job_details_div.find("div", class_="flex flex-col w-full md:mt-8 mt-5 md:min-w-[400px] md:max-w-[400px]")
+            company_name = left_job_details.find("div", class_="font-semibold text-md sm:text-base").get_text(strip=True) if left_job_details.find("div", class_="font-semibold text-md sm:text-base") else "not found"
+            job_description_element =  driver.find_element(By.CLASS_NAME, "HtmlDescription_content__9msWY")
+            job_description = job_description_element.text
+            job_description = job_description.replace('\n', ' ')
+            job_posting_date_div = right_job_details.find("div", class_="flex justify-between")
+            job_posting_date_data = job_posting_date_div.find_all("span")[1]
+            job_posting_date = job_posting_date_data.get_text(strip=True) if job_posting_date_data else "not found"
+
+
+            job_location_element = right_job_details.find_all("div", class_="mt-5")[1]
+            job_location_data = job_location_element.find_all("div", class_="flex items-center")[1].get_text(strip=True)
+            job_location = job_location_data if job_location_data else "not found"
+
+
+            job_category = Category.objects.get(slug=category_slug).name
+            job_type_element = right_job_details.find_all("div", class_="mt-5")[2]
+            job_type_data = job_type_element.find("button").get_text(strip=True)
+            job_type = job_type_data if job_type_data else "not found"
+
+            # if salary element is not found
+            salary_element = right_job_details.find_all("div", class_="flex justify-between")[1]
+            if salary_element:
+                salary_data = salary_element.find_all("span")[1]
+                salary = salary_data.get_text(strip=True) if salary_data else "not found"
+            else:
+                salary = "not found"
+
+            source = "Alfred.com.mt"
+
+            if not Job.objects.filter(company=company_name, location=job_location, user=request.user).exists():
+                scraped_data = Job(company=company_name, location=job_location, description=job_description, job_posted=job_posting_date, job_link=job_link, source=source, job_category=job_category, user=request.user, job_type=job_type, salary=salary, position=position)
+                scraped_data.save()
+                total_stored += 1
+            else:
+                total_skipped_jobs += 1
+        data = {
+            "is_success": True,
+            'url': url,
+            'total_jobs_found': len(job_grid_elements),
+            'total_stored': total_stored,
+            'total_skipped_jobs': total_skipped_jobs
+        }
     return data
 
 # Scrape Job
