@@ -91,6 +91,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                         job_type = job_details_page.find_all("div", class_="attribute-value")[1].get_text(strip=True) if job_details_page.find_all("div", class_="attribute-value") else "Type not found"
                         formatted_description = job_details_page.find("div", class_="article-description").get_text(strip=True) if job_details_page.find("div", class_="article-description") else "Description not found"
                         description = formatted_description
+                        phone_number = None
                         try:
                             phone_number_element = WebDriverWait(driver, 10).until(
                                 EC.presence_of_element_located((By.CSS_SELECTOR, "span.telnumber"))
@@ -122,6 +123,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                     'total_stored': len(job_grid_elements) - total_skipped_jobs,
                     'total_skipped_jobs': total_skipped_jobs
                 }
+            return data
         except Exception as e:
             print(f"An error occurred: {e}")
         finally:
@@ -364,7 +366,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                                 if contact_info_div:
                                     # Extract phone number
                                     phone_div = contact_info_div.find("h3", class_="phone")
-                                    phone_number = phone_div.find_next("div").get_text(strip=True) if phone_div else None
+                                    phone_number = phone_div.find_next("div").get_text(strip=True) if phone_number else None
                                     
                                     # Extract website
                                     website_span = contact_info_div.find("span", class_="clever-link-blank nowrap")
@@ -381,13 +383,13 @@ def scrape_job_details(url, max_pages, category_slug, request):
                                     total_stored += 1
                                 else:
                                     total_skipped_jobs += 1
-                                data = {
-                                    "is_success": True,
-                                    'url': url,
-                                    'total_jobs_found': total_job_found,
-                                    'total_stored': total_stored,
-                                    'total_skipped_jobs': total_skipped_jobs
-                                }
+                            data = {
+                                "is_success": True,
+                                'url': url,
+                                'total_jobs_found': total_job_found,
+                                'total_stored': total_stored,
+                                'total_skipped_jobs': total_skipped_jobs
+                            }
                     return data
         except Exception as e:
             print(f"An error occurred: {e}")
