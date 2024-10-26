@@ -28,10 +28,10 @@ def scrape_job_details(url, max_pages, category_slug, request):
     category_slug = category_slug.strip()
     category_name = Category.objects.get(slug=category_slug).name
     chrome_options = Options()
-    # chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
-    # chrome_options.add_argument('--headless')
-    # chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--remote-debugging-port=9222')
 
     service = Service(ChromeDriverManager().install())
@@ -464,20 +464,16 @@ def scrape_job_details(url, max_pages, category_slug, request):
                             total_stored += 1
                         else:
                             total_skipped_jobs += 1
-
-                data = {
-                    "is_success": True,
-                    'url': url,
-                    'total_jobs_found': len(job_grid_elements),
-                    'total_stored': total_stored,
-                    'total_skipped_jobs': total_skipped_jobs
-                }
-            
-            return data  # Moved outside the loop
+                    data = {
+                        "is_success": True,
+                        'url': url,
+                        'total_jobs_found': len(job_grid_elements),
+                        'total_stored': total_stored,
+                        'total_skipped_jobs': total_skipped_jobs
+                    }
+            return data 
         except Exception as e:
             print(f"An error occurred: {e}")
-            data['is_success'] = False
-            return data
         finally:
             try:
                 driver.quit()
@@ -487,6 +483,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
+    return data
 
 # Scrape Job
 @login_required(login_url='login')
