@@ -190,19 +190,24 @@ def scrape_job_details(url, max_pages, category_slug, request):
                         job_posting_date = job_details_page.find("div", class_="info_extra_details").get_text(strip=True) if job_details_page.find("div", class_="info_extra_details") else "Date not found"
                         job_type = job_details_page.find("span", id="job_type").get_text(strip=True) if job_details_page.find("span", id="job_type") else None
                         job_description = job_details_page.find("p", id="paragraph").get_text(separator=" ", strip=True) if job_details_page.find("p", id="paragraph") else "Description not found"
-                        if not Job.objects.filter(position=job_title, company=company_name, location=job_location, job_type=job_type, user=request.user).exists():
-                            scraped_data = Job(position=job_title, company=company_name, location=job_location, salary=salary, phone_number=phone_number, description=job_description, job_posted=job_posting_date, job_link=job_details_url, source=source, job_category=category_name, user=request.user)
+                        
+
+                        if not Job.objects.filter(position=job_title, company=company_name, location=job_location, job_type=job_type).exists():
+                            scraped_data = Job(position=job_title, company=company_name, location=job_location, job_type=job_type, 
+                                            description=job_description, job_posted=job_posting_date, job_link=job_details_url, source=source, job_category=category_name, user=request.user, phone_number=phone_number)
                             scraped_data.save()
                         else:
+                            # if job already exists, skip it and increment the total_skipped_jobs counter and continue to the next job
                             total_skipped_jobs += 1
                     except Exception as e:
                         print(f"{e}")
+                        continue
                 data = {
                     "is_success": True,
                     'url': url,
-                    'total_jobs_found': total_job_found,
-                    'total_stored': total_stored,
-                   ' total_skipped_jobs': total_skipped_jobs
+                    'total_jobs_found': len(job_grid_elements),
+                    'total_stored': len(job_grid_elements) - total_skipped_jobs,
+                    'total_skipped_jobs': total_skipped_jobs
                 }
             return data
         except Exception as e:
@@ -312,6 +317,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
             'url': base_url,
             'category_slug': category_slug,
         }
+        total_job_found = 0
         try:
             for page_number in range(1, max_pages + 1):
                 if page_number == 1:
@@ -362,15 +368,27 @@ def scrape_job_details(url, max_pages, category_slug, request):
                                 driver.switch_to.window(driver.window_handles[-1])
                                 driver.get(profile_link)
                                 company_contact_page = BeautifulSoup(driver.page_source, features="html.parser")
-                                contact_info_div = company_contact_page.find("div", class_="columns3 MT30")
-                                if contact_info_div:
-                                    # Extract phone number
-                                    phone_div = contact_info_div.find("h3", class_="phone")
-                                    phone_number = phone_div.find_next("div").get_text(strip=True) if phone_number else None
-                                    
-                                    # Extract website
-                                    website_span = contact_info_div.find("span", class_="clever-link-blank nowrap")
-                                    website = website_span.get("data-link") if website_span else "not found"
+                                company_contact_div = company_contact_page.find("div", class_="columns3 MT30")
+                                if company_contact_div:
+                                    # Extract phone number based on "Телефон" header text
+                                    phone_section = company_contact_div.find("h3", string="Телефон")
+                                    if phone_section:
+                                        phone_number_div = phone_section.find_next_sibling("div")
+                                        phone_number = phone_number_div.get_text(strip=True) if phone_number_div else "not found"
+                                    else:
+                                        phone_number = "not found"
+
+                                    # Extract website based on "Уебсайт" header text
+                                    website_section = company_contact_div.find("h3", string="Уебсайт")
+                                    if website_section:
+                                        website_div = website_section.find_next_sibling("div")
+                                        website_span = website_div.find("span", class_="clever-link-blank nowrap") if website_div else None
+                                        website = website_span["data-link"] if website_span else "not found"
+                                    else:
+                                        website = "not found"
+
+                                print(f"Phone Number: {phone_number}")
+                                print(f"Website: {website}")
                                 driver.close()
                                 driver.switch_to.window(driver.window_handles[0])
                                 if job_description_div:
@@ -510,57 +528,56 @@ def scrape_job_details(url, max_pages, category_slug, request):
             main_link = 'https://alfred.com.mt'
             full_job_link = f"{main_link}{job_link}"
             job__link.add(full_job_link)
+            print(len(job__link))
         for job_link in job__link:
+            total_stored += 1
+            print(f"Scraping job link: {job_link}", "Total Stored: ", total_stored)
             driver.get(job_link)
             job_page_source = BeautifulSoup(driver.page_source, features="html.parser")
-            position = job_page_source.find("h1", class_="text-md md:text-lg font-bold").get_text(strip=True) 
-            job_details_div = job_page_source.find("div", class_="flex flex-col md:flex-row relative")
-            left_job_details = job_details_div.find("div", class_="flex-grow md:mr-5 mt-8")
-            right_job_details = job_details_div.find("div", class_="flex flex-col w-full md:mt-8 mt-5 md:min-w-[400px] md:max-w-[400px]")
-            company_name = left_job_details.find("div", class_="font-semibold text-md sm:text-base").get_text(strip=True) if left_job_details.find("div", class_="font-semibold text-md sm:text-base") else "not found"
-            job_description_element =  driver.find_element(By.CLASS_NAME, "HtmlDescription_content__9msWY")
-            job_description = job_description_element.text
-            job_description = job_description.replace('\n', ' ')
-            job_posting_date_div = right_job_details.find("div", class_="flex justify-between")
-            job_posting_date_data = job_posting_date_div.find_all("span")[1]
-            job_posting_date = job_posting_date_data.get_text(strip=True) if job_posting_date_data else "not found"
-
-
-            job_location_element = right_job_details.find_all("div", class_="mt-5")[1]
-            job_location_data = job_location_element.find_all("div", class_="flex items-center")[1].get_text(strip=True)
-            job_location = job_location_data if job_location_data else "not found"
-
-
-            job_category = Category.objects.get(slug=category_slug).name
-            job_type_element = right_job_details.find_all("div", class_="mt-5")[2]
-            job_type_data = job_type_element.find("button").get_text(strip=True)
-            job_type = job_type_data if job_type_data else "not found"
-
-            # if salary element is not found
-            salary_element = right_job_details.find_all("div", class_="flex justify-between")[1]
-            if salary_element:
-                salary_data = salary_element.find_all("span")[1]
-                salary = salary_data.get_text(strip=True) if salary_data else "not found"
-            else:
-                salary = "not found"
-
-            source = "Alfred.com.mt"
-
-            if not Job.objects.filter(company=company_name, location=job_location, user=request.user).exists():
-                scraped_data = Job(company=company_name, location=job_location, description=job_description, job_posted=job_posting_date, job_link=job_link, source=source, job_category=job_category, user=request.user, job_type=job_type, salary=salary, position=position)
-                scraped_data.save()
-                total_stored += 1
-            else:
-                total_skipped_jobs += 1
+            try:
+                job_details_div = job_page_source.find("div", class_="job-details")
+                position_name = job_page_source.find("h1", class_="text-md md:text-lg font-bold").get_text(strip=True) 
+                job_details_div = job_page_source.find("div", class_="flex flex-col md:flex-row relative")
+                left_job_details = job_details_div.find("div", class_="flex-grow md:mr-5 mt-8")
+                right_job_details = job_details_div.find("div", class_="flex flex-col w-full md:mt-8 mt-5 md:min-w-[400px] md:max-w-[400px]")
+                company_name = left_job_details.find("div", class_="font-semibold text-md sm:text-base").get_text(strip=True) if left_job_details.find("div", class_="font-semibold text-md sm:text-base") else "not found"
+                job_description_element =  driver.find_element(By.CLASS_NAME, "HtmlDescription_content__9msWY")
+                job_description = job_description_element.text
+                job_description = job_description.replace('\n', ' ')
+                job_posting_date_div = right_job_details.find("div", class_="flex justify-between")
+                job_posting_date_data = job_posting_date_div.find_all("span")[1]
+                job_posting_date = job_posting_date_data.get_text(strip=True) if job_posting_date_data else "not found"
+                job_location_element = right_job_details.find_all("div", class_="mt-5")[1]
+                if job_location_element:
+                    job_location_data = job_location_element.find_all("div", class_="flex items-center")[1].get_text(strip=True)
+                    job_location = job_location_data if job_location_data else "not found"
+                else:
+                    job_location = "not found"
+                job_category = Category.objects.get(slug=category_slug).name
+                job_type_element = right_job_details.find_all("div", class_="mt-5")[2]
+                if job_type_element:
+                    job_type_data = job_type_element.find("button").get_text(strip=True)
+                    job_type = job_type_data if job_type_data else "not found"
+                else:
+                    job_type = "not found"
+                source = "Alfred.com.mt"
+                if not Job.objects.filter(position=position_name, company=company_name, location=job_location, user=request.user).exists():
+                    scraped_data = Job(position=position_name, company=company_name, location=job_location, description=job_description, job_posted=job_posting_date, job_link=job_link, source=source, job_category=job_category, user=request.user, job_type=job_type)
+                    scraped_data.save()
+                else:
+                    total_skipped_jobs += 1
+                    continue
+            except Exception as e:
+                print(f"{e}")
+                continue
         data = {
             "is_success": True,
-            'url': url,
-            'total_jobs_found': len(job_grid_elements),
+            'url': base_url,
+            'total_jobs_found': len(job__link),
             'total_stored': total_stored,
             'total_skipped_jobs': total_skipped_jobs
         }
     return data
-
 # Scrape Job
 @login_required(login_url='login')
 def scrape_job(request):

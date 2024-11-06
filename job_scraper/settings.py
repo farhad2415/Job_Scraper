@@ -132,3 +132,7 @@ MESSAGE_TAGS = {
     messages.INFO: 'info',
     messages.SUCCESS: 'success',
 }
+
+
+# redirect to https
+SECURE_SSL_REDIRECT = False
