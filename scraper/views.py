@@ -28,10 +28,10 @@ def scrape_job_details(url, max_pages, category_slug, request):
     category_slug = category_slug.strip()
     category_name = Category.objects.get(slug=category_slug).name
     chrome_options = Options()
-    # chrome_options.add_argument('--no-sandbox')
+    chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
-    # chrome_options.add_argument('--headless')
-    # chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--remote-debugging-port=9222')
 
     service = Service(ChromeDriverManager().install())
@@ -512,10 +512,9 @@ def scrape_job_details(url, max_pages, category_slug, request):
         driver.get(base_url + category_slug)
         last_height = driver.execute_script("return document.body.scrollHeight")
         job__link = set()
-
         while True:
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
+            time.sleep(3)
             new_height = driver.execute_script("return document.body.scrollHeight")
             if new_height == last_height:
                 break
@@ -533,10 +532,11 @@ def scrape_job_details(url, max_pages, category_slug, request):
             total_stored += 1
             print(f"Scraping job link: {job_link}", "Total Stored: ", total_stored)
             driver.get(job_link)
+            time.sleep(2)
             job_page_source = BeautifulSoup(driver.page_source, features="html.parser")
             try:
                 job_details_div = job_page_source.find("div", class_="job-details")
-                position_name = job_page_source.find("h1", class_="text-md md:text-lg font-bold").get_text(strip=True) 
+                position_name = job_page_source.find("h1", class_="text-md md:text-lg font-bold").get_text(strip=True) if job_page_source.find("h1", class_="text-md md:text-lg font-bold") else "not found"
                 job_details_div = job_page_source.find("div", class_="flex flex-col md:flex-row relative")
                 left_job_details = job_details_div.find("div", class_="flex-grow md:mr-5 mt-8")
                 right_job_details = job_details_div.find("div", class_="flex flex-col w-full md:mt-8 mt-5 md:min-w-[400px] md:max-w-[400px]")
@@ -549,7 +549,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 job_posting_date = job_posting_date_data.get_text(strip=True) if job_posting_date_data else "not found"
                 job_location_element = right_job_details.find_all("div", class_="mt-5")[1]
                 if job_location_element:
-                    job_location_data = job_location_element.find_all("div", class_="flex items-center")[1].get_text(strip=True)
+                    job_location_data = job_location_element.find_all("div", class_="flex items-center")[1].get_text(strip=True) if job_location_element.find_all("div", class_="flex items-center")[1] else "not found"
                     job_location = job_location_data if job_location_data else "not found"
                 else:
                     job_location = "not found"
@@ -577,7 +577,8 @@ def scrape_job_details(url, max_pages, category_slug, request):
             'total_stored': total_stored,
             'total_skipped_jobs': total_skipped_jobs
         }
-    return data
+        return data
+
 # Scrape Job
 @login_required(login_url='login')
 def scrape_job(request):
@@ -603,7 +604,7 @@ def scrape_job(request):
                     return JsonResponse({
                         'is_success': True,
                         'total_jobs_found': data['total_jobs_found'],
-                        'total_stored': data['total_stored'],
+                        'total_skipped_jobs': data['total_skipped_jobs'],
                     })
                 else:
                     return JsonResponse({'is_success': False, 'url': selected_url.url})
