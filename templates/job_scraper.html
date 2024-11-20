@@ -4,6 +4,14 @@
 
 {% block content %}
 
+<style>
+    .table thead th {
+    vertical-align: top;
+    border-bottom: 2px solid #dee2e6;
+    text-align: left;
+    border: 1px dotted;
+    }
+</style>
 <div class="container-fluid mt-5">
     <div class="d-flex justify-content-between mb-3">
         <h1>Jobs Position: {{ total_jobs }} </h1>
@@ -71,7 +79,7 @@
                 <!-- <td>{{ job.description }}</td> -->
                 <td>
                     <div class="job-description">
-                        <span class="short-description">{{ job.description|slice:":200" }}{% if job.description|length > 200 %}...{% endif %}</span>
+                        <span class="short-description">{{ job.description|slice:":100" }}{% if job.description|length > 150 %}...{% endif %}</span>
                         
                         {% if job.description|length > 200 %}
                             <a href="javascript:void(0);" class="show-more" data-bs-toggle="modal" data-bs-target="#descriptionModal" onclick="setModalContent('{{ job.description|escapejs }}');">Show More</a>

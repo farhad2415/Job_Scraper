@@ -1341,8 +1341,10 @@ pre {
     vertical-align: top;
     border-top: 1px solid #dee2e6; }
   .table thead th {
-    vertical-align: bottom;
-    border-bottom: 2px solid #dee2e6; }
+    vertical-align: top;
+    border-bottom: 2px solid #dee2e6;
+    text-align: left;
+    border: 1px dotted; }
   .table tbody + tbody {
     border-top: 2px solid #dee2e6; }
 
