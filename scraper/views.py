@@ -28,10 +28,10 @@ def scrape_job_details(url, max_pages, category_slug, request):
     category_slug = category_slug.strip()
     category_name = Category.objects.get(slug=category_slug).name
     chrome_options = Options()
-    chrome_options.add_argument('--no-sandbox')
+    # chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--disable-gpu')
+    # chrome_options.add_argument('--headless')
+    # chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--remote-debugging-port=9222')
 
     service = Service(ChromeDriverManager().install())
@@ -578,6 +578,45 @@ def scrape_job_details(url, max_pages, category_slug, request):
             'total_skipped_jobs': total_skipped_jobs
         }
         return data
+
+    if base_url == "https://poslovi.infostud.com/":
+        total_stored = 0
+        total_skipped_jobs = 0
+        data = {
+            "is_success": False,
+            'url': base_url,
+            'category_slug': category_slug,
+        }
+        try:
+            for page_number in range(1, max_pages + 1):
+                if page_number == 1:
+                    url = f"{base_url}{category_slug}"
+                else:
+                    url = f"{base_url}{category_slug}/page/{page_number}"
+                driver.get(url)
+                page_source = BeautifulSoup(driver.page_source, features="html.parser")
+                job_grid_elements = page_source.find_all("div", class_='job-type__premium')
+                if not job_grid_elements:
+                    print(f"No job elements found on page {page_number}.")
+                    break
+                for job_element in job_grid_elements:
+                    job_link_temp = job_element.find("a", href=True)['href']
+                    job_link = f"https://poslovi.infostud.com{job_link_temp}"
+                    driver.get(job_link)
+                    job_page_source = BeautifulSoup(driver.page_source, features="html.parser")
+                    header_div = job_page_source.find("div", class_="ogl-header__desc")
+                    if header_div:
+                        job_title = header_div.find("h1").get_text(strip=True) if header_div.find("h1") else "not found"
+                        company_name = header_div.find("h2").get_text(strip=True) if header_div.find("h2") else "not found"
+                        job_location = header_div.find("div" , class_="job__location" ).get_text(strip=True) if header_div.find("p") else "not found"
+                        job_posting_date = header_div.find("p").get_text(strip=True).split()[-1] if header_div.find("p") else "not found"
+                    else:
+                        job_title = "not found"
+                        company_name = "not found"
+                
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
 
 # Scrape Job
 @login_required(login_url='login')

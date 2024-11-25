@@ -9,7 +9,7 @@ class SubCategory(models.Model):
 
 class Category(models.Model):
     name = models.CharField(max_length=255)
-    slug = models.CharField(max_length=100, blank=True, null=True)
+    slug = models.CharField(max_length=500, blank=True, null=True)
     sub_category = models.ForeignKey('SubCategory', on_delete=models.CASCADE, blank=True, null=True)
     def __str__(self):
         return self.name  
@@ -37,7 +37,7 @@ class Job(models.Model):
     job_link = models.URLField(max_length=255, blank=True, null=True)
     source = models.CharField(max_length=255, blank=True, null=True)
     job_category = models.CharField(max_length=255, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE, blank=True, null=True)
 
     def __str__(self):  
