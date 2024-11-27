@@ -42,10 +42,13 @@ def scrape_job_details(url, max_pages, category_slug, request):
         'url': url,
         'category_slug': category_slug,
         'total_jobs_found': 0,
+        'total_stored': 0,
         'total_skipped_jobs': 0
     }
-    total_skipped_jobs = 0
     if base_url == "https://www.romjob.ro/anunturi/locuri-de-munca/": 
+        total_stored = 0
+        total_skipped_jobs = 0
+        total_jobs_found = 0
         data = {
             "is_success": False,
             'url': base_url,
@@ -138,6 +141,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
     if base_url == "https://jobzz.ro/":
         total_stored = 0
         total_skipped_jobs = 0
+        total_jobs_found = 0
         data = {
             "is_success": False,
             'url': base_url,
@@ -169,44 +173,53 @@ def scrape_job_details(url, max_pages, category_slug, request):
                         continue
                     job_details_url = f"{job_url}"
                     driver.get(job_details_url)
-                    # job_details_page = BeautifulSoup(driver.page_source, 'lxml')
+                    job_details_page = BeautifulSoup(driver.page_source, 'lxml')
                     try:
-                        wait = WebDriverWait(driver, 10)
-                        try:
-                            show_phone_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#phone_holder")))
-                            show_phone_button.click()
-                            time.sleep(2)
-                            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#phone_number")))
-                        except TimeoutException:
-                            print("no number")
-                        job_details_page = BeautifulSoup(driver.page_source, 'lxml')
-                        salary = job_details_page.find("span", id="price").get_text(strip=True) if job_details_page.find("span", id="price") else "Salary not found"
-                        #location_city by id
-                        job_location = job_details_page.find("span", id="location_city").get_text(strip=True) if job_details_page.find("span", id="location_city") else "not found"
-                        phone_number = job_details_page.find("span", id="phone_number").get_text(strip=True) if job_details_page.find("span", id="phone_number") else None
-                        source = "Jobzz.ro"
-                        company_name = job_details_page.find("div", class_="account_right").get_text(strip=True) if job_details_page.find("div", class_="account_right") else "not found"
-                        category_name = Category.objects.get(slug=category_slug).name
-                        job_posting_date = job_details_page.find("div", class_="info_extra_details").get_text(strip=True) if job_details_page.find("div", class_="info_extra_details") else "Date not found"
-                        job_type = job_details_page.find("span", id="job_type").get_text(strip=True) if job_details_page.find("span", id="job_type") else None
-                        job_description = job_details_page.find("p", id="paragraph").get_text(separator=" ", strip=True) if job_details_page.find("p", id="paragraph") else "Description not found"
-                        
-
-                        if not Job.objects.filter(position=job_title, company=company_name, location=job_location, job_type=job_type).exists():
-                            scraped_data = Job(position=job_title, company=company_name, location=job_location, job_type=job_type, 
-                                            description=job_description, job_posted=job_posting_date, job_link=job_details_url, source=source, job_category=category_name, user=request.user, phone_number=phone_number)
-                            scraped_data.save()
-                        else:
-                            # if job already exists, skip it and increment the total_skipped_jobs counter and continue to the next job
-                            total_skipped_jobs += 1
-                    except Exception as e:
-                        print(f"{e}")
-                        continue
+                        accept_cookies_button = wait.until(EC.element_to_be_clickable((By.ID, "onetrust-accept-btn-handler")))
+                        accept_cookies_button.click()
+                        print("Cookies accepted successfully.")
+                    except TimeoutException:
+                        print("Accept cookies button not found or already clicked.")
+                    try:
+                        show_phone_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#phone_holder")))
+                        show_phone_button.click()
+                        time.sleep(2)
+                        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#phone_number")))
+                    except TimeoutException:
+                        print("no number")
+                    job_details_page = BeautifulSoup(driver.page_source, 'lxml')
+                    salary = job_details_page.find("span", id="price").get_text(strip=True) if job_details_page.find("span", id="price") else "Salary not found"
+                    #location_city by id
+                    job_location = job_details_page.find("span", id="location_city").get_text(strip=True) if job_details_page.find("span", id="location_city") else "not found"
+                    phone_number = job_details_page.find("span", id="phone_number").get_text(strip=True) if job_details_page.find("span", id="phone_number") else None
+                    source = "Jobzz.ro"
+                    company_name = job_details_page.find("div", class_="account_right").get_text(strip=True) if job_details_page.find("div", class_="account_right") else "not found"
+                    category_name = Category.objects.get(slug=category_slug).name
+                    job_posting_date = job_details_page.find("div", class_="info_extra_details").get_text(strip=True) if job_details_page.find("div", class_="info_extra_details") else "Date not found"
+                    job_type = job_details_page.find("span", id="job_type").get_text(strip=True) if job_details_page.find("span", id="job_type") else None
+                    job_description = job_details_page.find("p", id="paragraph").get_text(separator=" ", strip=True) if job_details_page.find("p", id="paragraph") else "Description not found"
+                    if not Job.objects.filter(position=job_title, company=company_name, location=job_location, job_type=job_type).exists():
+                        scraped_data = Job(
+                            position=job_title, 
+                            company=company_name, 
+                            location=job_location, 
+                            job_type=job_type,
+                            description=job_description, 
+                            job_posted=job_posting_date, 
+                            job_link=job_details_url, 
+                            source=source, 
+                            job_category=category_name, 
+                            user=request.user, 
+                            phone_number=phone_number)
+                        scraped_data.save()
+                        total_stored += 1
+                    else:
+                        total_skipped_jobs += 1
                 data = {
                     "is_success": True,
                     'url': url,
-                    'total_jobs_found': len(job_grid_elements),
-                    'total_stored': len(job_grid_elements) - total_skipped_jobs,
+                    'total_jobs_found': total_jobs_found,
+                    'total_stored': total_stored,
                     'total_skipped_jobs': total_skipped_jobs
                 }
             return data
@@ -224,6 +237,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
     if base_url == "https://www.posao.hr/djelatnosti/":
         total_stored = 0
         total_skipped_jobs = 0
+        total_jobs_found = 0
         data = {
             "is_success": False,
             'url': base_url,
@@ -312,6 +326,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
     if base_url == "https://www.zaplata.bg/":
         total_stored = 0
         total_skipped_jobs = 0
+        total_jobs_found = 0
         data = {
             "is_success": False,
             'url': base_url,
@@ -423,6 +438,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
     if base_url == "https://www.maltapark.com/jobs/category/":
         total_stored = 0
         total_skipped_jobs = 0
+        total_jobs_found = 0
         data = {
             "is_success": False,
             'url': base_url,
@@ -504,6 +520,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
     if base_url == "https://alfred.com.mt/jobs?cat=":
         total_stored = 0
         total_skipped_jobs = 0
+        total_jobs_found = 0
         data = {
             "is_success": False,
             'url': base_url,
@@ -578,10 +595,10 @@ def scrape_job_details(url, max_pages, category_slug, request):
             'total_skipped_jobs': total_skipped_jobs
         }
         return data
-
     if base_url == "https://poslovi.infostud.com/":
         total_stored = 0
         total_skipped_jobs = 0
+        total_jobs_found = 0
         data = {
             "is_success": False,
             'url': base_url,
@@ -600,6 +617,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 if not job_grid_elements:
                     print(f"No job elements found on page {page_number}.")
                     break
+                total_jobs_found += len(job_grid_elements)
                 for job_element in job_grid_elements:
                     job_link_temp = job_element.find("a", href=True)['href']
                     job_link = f"https://poslovi.infostud.com{job_link_temp}"
@@ -610,7 +628,11 @@ def scrape_job_details(url, max_pages, category_slug, request):
                         job_title = header_div.find("h1").get_text(strip=True) if header_div.find("h1") else "not found"
                         company_name = header_div.find("h2").get_text(strip=True) if header_div.find("h2") else "not found"
                         job_location = header_div.find("div" , class_="job__location" ).get_text(strip=True) if header_div.find("p") else "not found"
-                        job_posting_date = header_div.find("p").get_text(strip=True) if header_div.find("p") else "not found"
+                        job_posting_date = header_div.find('p', class_='uk-margin-remove-top uk-flex uk-flex-row uk-flex-middle')
+                        if job_posting_date:
+                            job_posting_date = job_posting_date.get_text(strip=True)
+                        else:
+                            job_posting_date = "not found"
                         category_name = Category.objects.get(slug=category_slug).name
                         job_type = header_div.find("div", class_="job__tags ").find("span")[1].get_text(strip=True) if header_div.find("div", class_="job__tags ") else "not found"
                         salary = header_div.find("div", class_="job__tags ").find("span")[0].get_text(strip=True) if header_div.find("div", class_="job__tags ") else "not found"
@@ -626,14 +648,27 @@ def scrape_job_details(url, max_pages, category_slug, request):
                         job_description = "not found"
                     website = None
                     source = "poslovi.infostud.com"
-                    scraped_data = Job(position=job_title, company=company_name, location=job_location, description=job_description, job_link=job__link, source=source, job_category=category_name, user=request.user, phone_number=phone_number, salary=salary, website=website)
-                    scraped_data.save()
-                    total_stored += 1
-                    
+                    if not Job.objects.filter(position=job_title, company=company_name, location=job_location, user=request.user).exists():
+                        scraped_data = Job(
+                            position=job_title, 
+                            company=company_name, 
+                            location=job_location, 
+                            description=job_description, 
+                            job_posted=job_posting_date, 
+                            job_link=job__link, source=source, 
+                            job_category=category_name, 
+                            user=request.user, 
+                            phone_number=phone_number, 
+                            salary=salary, website=website
+                            )
+                        scraped_data.save()
+                        total_stored += 1
+                    else:
+                        total_skipped_jobs += 1
                 data = {
                     "is_success": True,
                     'url': url,
-                    'total_jobs_found': len(job_grid_elements),
+                    'total_jobs_found': total_jobs_found,
                     'total_stored': total_stored,
                     'total_skipped_jobs': total_skipped_jobs
                 }
@@ -676,10 +711,11 @@ def scrape_job(request):
                     return JsonResponse({
                         'is_success': True,
                         'total_jobs_found': data['total_jobs_found'],
+                        'total_stored': data['total_stored'],
                         'total_skipped_jobs': data['total_skipped_jobs'],
                     })
                 else:
-                    return JsonResponse({'is_success': False, 'url': selected_url.url})
+                    return JsonResponse({'is_success': False, 'total_skipped_jobs': data['total_skipped_jobs']})
             except ValueError:
                 return JsonResponse({'is_success': False, 'error': 'Max pages must be a valid number.'})
             except Exception as e:
@@ -739,7 +775,7 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             auth_login(request, user)
-            return redirect('home')  # Redirect to a home page or dashboard
+            return redirect('home') 
         else:
             messages.error(request, 'Invalid username or password')
     return render(request, 'login.html')

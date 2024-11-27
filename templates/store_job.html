@@ -142,9 +142,9 @@
             const scrapingResult = document.getElementById('scrapingResult');
 
             if (data.is_success) {
-                scrapingResult.innerHTML = `<div class="alert alert-success">Scraped ${data.total_jobs_found} Jobs! Stored ${data.total_stored} Jobs.</div>`;
+                scrapingResult.innerHTML = `<div class="alert alert-success">Total Jobs Found: ${data.total_jobs_found} <br> Total Jobs Saved: ${data.total_stored} <br> Total Skiped Jobs: ${data.total_skipped_jobs}</div>`;
             } else {
-                scrapingResult.innerHTML = `<div class="alert alert-danger">Scrape Failed! ${data.error_message}</div>`;
+                scrapingResult.innerHTML = `<div class="alert alert-danger">Scrape Failed! ${data.total_skipped_jobs}</div>`;
             }
 
             resultCard.style.display = 'block'; 
