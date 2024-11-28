@@ -33,7 +33,6 @@ def scrape_job_details(url, max_pages, category_slug, request):
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--remote-debugging-port=9222')
-
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
                                                                                                                               
@@ -685,8 +684,6 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 print(f"An unexpected error occurred while quitting the driver: {e}")
         return data
 
-
-# Scrape Job
 @login_required(login_url='login')
 def scrape_job(request):
     urls = AvilableUrl.objects.all()  
@@ -723,9 +720,8 @@ def scrape_job(request):
 
     return render(request, 'store_job.html', {'urls': urls, 'selected_url': selected_url, 'categories': categories, 'max_pages': max_pages, 'category_slug': category_slug})
 
-# Scrape View
 @login_required(login_url='login')  
-def scrape_view(request):
+def view_scraped_data(request):
     jobs = Job.objects.filter(user=request.user).order_by('-created_at')
     paginator = Paginator(jobs, 20) 
     page_number = request.GET.get('page')
@@ -738,7 +734,6 @@ def scrape_view(request):
                         'total_jobs': total_jobs
                         })
 
-# Update Phone Number When Geeting Null
 def update_phone_number(request, job_id):
     if request.method == "POST":
         phone_number = request.POST.get('phone_number')
@@ -747,9 +742,7 @@ def update_phone_number(request, job_id):
         job.save()
         messages.success(request, "Phone number updated successfully!") 
         return redirect(request.META['HTTP_REFERER'])
-
-
-# Update Salary Button   
+  
 def update_salary(request, job_id):
     if request.method == "POST":
         salary = request.POST.get('salary')
@@ -759,13 +752,9 @@ def update_salary(request, job_id):
         messages.success(request, "Salary updated successfully!") 
         return redirect(request.META['HTTP_REFERER'])
 
-
-# Defualt Home Page
 @login_required(login_url='login')
 def home(request):
     return render(request, 'home.html')
-
-# Login Page #login
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('home')
@@ -785,12 +774,10 @@ def logout_view(request):
     messages.success(request, 'You have been logged out successfully.')
     return redirect('login')
 
-# export_to_excel function to export job data to excel file
 import pandas as pd
 from django.http import HttpResponse
 from django.utils.timezone import make_naive
 from datetime import datetime
-
 def export_to_excel(request):
     data = Job.objects.filter(user=request.user)
     data_dict = list(data.values())
@@ -805,4 +792,13 @@ def export_to_excel(request):
     df.to_excel(response, index=False, engine='openpyxl')
     return response
 
-
+@login_required
+def confirm_delete_jobs(request):
+    job_count = Job.objects.filter(user=request.user).count()
+    if request.method == "POST":
+        if job_count > 0:
+            Job.objects.filter(user=request.user).delete()
+            return redirect('view_scraped_data') 
+        else:
+            return redirect('view_scraped_data')
+    return render(request, 'confirm_delete_job.html', {'job_count': job_count})

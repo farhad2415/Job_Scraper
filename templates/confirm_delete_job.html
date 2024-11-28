@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Confirm Delete Jobs{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-danger text-white text-center">
+            <h2>Confirm Deletion</h2>
+        </div>
+        <div class="card-body">
+            {% if job_count > 0 %}
+            <p class="text-center text-danger">
+                <strong>
+                    Are you sure you want to delete all <span class="text-dark">{{ job_count }}</span> job position(s)?
+                    This action cannot be undone.
+                </strong>
+            </p>
+            {% else %}
+            <p class="text-center text-warning">
+                <strong>You currently have no job positions to delete.</strong>
+            </p>
+            {% endif %}
+            <form method="POST" action="">
+                {% csrf_token %}
+                {% if job_count > 0 %}
+                <div class="d-flex justify-content-center mt-4">
+                    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                    <a href="/view_scraped_data/" class="btn btn-secondary">No, Cancel</a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

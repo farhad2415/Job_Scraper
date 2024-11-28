@@ -15,10 +15,13 @@
 <div class="container-fluid mt-5">
     <div class="d-flex justify-content-between mb-3">
         <h1>Jobs Position: {{ total_jobs }} </h1>
+    <div class="justify-content-between mb-3">
+        <a href="/confirm-delete-jobs/" class="btn btn-danger">Delete All Jobs</a>
+    </div>
+    <div>
         <h5>Translate this page:</h5>
         <div id="google_translate_element" class="tesx"></div>
     </div>
-
      <script type="text/javascript">
             function googleTranslateElementInit() {
             new google.translate.TranslateElement({pageLanguage: 'zh-CN', includedLanguages: 'en' , layout: google.translate.TranslateElement.InlineLayout.EASY, multilanguagePage: true}, 'google_translate_element');
