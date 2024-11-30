@@ -361,7 +361,6 @@ def scrape_job_details(url, max_pages, category_slug, request):
                 print(f"An unexpected error occurred while quitting the driver: {e}")
 
         return data
-
     if base_url == "https://www.zaplata.bg/":
         total_stored = 0
         total_skipped_jobs = 0
