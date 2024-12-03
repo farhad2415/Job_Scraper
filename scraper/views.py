@@ -172,12 +172,16 @@ def scrape_job_details(url, max_pages, category_slug, request):
                     job_details_url = f"{job_url}"
                     driver.get(job_details_url)
                     job_details_page = BeautifulSoup(driver.page_source, 'lxml')
-                    try:
-                        accept_cookies_button = wait.until(EC.element_to_be_clickable((By.ID, "onetrust-accept-btn-handler")))
-                        accept_cookies_button.click()
-                        print("Cookies accepted successfully.")
-                    except TimeoutException:
-                        print("Accept cookies button not found or already clicked.")
+                    if job_details_page:
+                        try:
+                            wait = WebDriverWait(driver, 5)
+                            accept_cookies_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".cookie_accept_button")))
+                            accept_cookies_button.click()
+                            wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".cookie_accept_button")))
+                        except Exception as e:
+                            print(f"An error occurred while accepting cookies: {e}")
+                    else:
+                        print("No accept cookies button found")
                     try:
                         show_phone_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#phone_holder")))
                         show_phone_button.click()
