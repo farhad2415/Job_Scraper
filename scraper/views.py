@@ -28,10 +28,10 @@ def scrape_job_details(url, max_pages, category_slug, request):
     category_slug = category_slug.strip()
     category_name = Category.objects.get(slug=category_slug).name
     chrome_options = Options()
-    chrome_options.add_argument('--no-sandbox')
+    # chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--disable-gpu')
+    # chrome_options.add_argument('--headless')
+    # chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--remote-debugging-port=9222')
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -145,61 +145,58 @@ def scrape_job_details(url, max_pages, category_slug, request):
             'url': base_url,
             'category_slug': category_slug,
         }
-        total_job_found = 0
+
         try:
             for page_number in range(1, max_pages + 1):
-                if page_number == 1:
-                    url = f"{base_url}{category_slug}.html"
-                else:
-                    url = f"{base_url}{category_slug}_{page_number}.html"
+                url = f"{base_url}{category_slug}{'_' + str(page_number) if page_number > 1 else ''}.html"
                 driver.get(url)
                 page_source = BeautifulSoup(driver.page_source, features="lxml")
                 
                 if "Nu am găsit niciun rezultat" in page_source.get_text():
                     print(f"No more pages found after page {page_number-1}.")
                     break
+
                 job_grid_elements = page_source.find_all("a", class_='main_items item_cart')
                 if not job_grid_elements:
                     print(f"No job elements found on page {page_number}.")
                     break
+
                 for job_element in job_grid_elements:
                     job_title = job_element.find("span", class_="title").get_text(strip=True) if job_element.find("span", class_="title") else "Position not found"
                     job_url = job_element['href'] if job_element else None
                     if not job_url:
                         print("Job URL not found, skipping.")
-                        data['total_skipped_jobs'] += 1
+                        total_skipped_jobs += 1
                         continue
+
                     job_details_url = f"{job_url}"
                     driver.get(job_details_url)
-                    job_details_page = BeautifulSoup(driver.page_source, 'lxml')
-                    if job_details_page:
-                        try:
-                            wait = WebDriverWait(driver, 5)
-                            accept_cookies_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".cookie_accept_button")))
-                            accept_cookies_button.click()
-                            wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".cookie_accept_button")))
-                        except Exception as e:
-                            print(f"An error occurred while accepting cookies: {e}")
-                    else:
-                        print("No accept cookies button found")
+                    wait = WebDriverWait(driver, 10)
+                    try:
+                        accept_cookies_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#onetrust-accept-btn-handler")))
+                        accept_cookies_button.click()
+                        print("Cookies accepted successfully.")
+                    except Exception as e:
+                        print(f"An error occurred while accepting cookies: {e}")
                     try:
                         show_phone_button = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#phone_holder")))
                         show_phone_button.click()
-                        time.sleep(2)
+                        print("Phone holder clicked")
                         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#phone_number")))
+                        print("Phone number loaded")
+                        time.sleep(2)
                     except TimeoutException:
-                        print("no number")
+                        print("Phone holder or number not found")
                     job_details_page = BeautifulSoup(driver.page_source, 'lxml')
                     salary = job_details_page.find("span", id="price").get_text(strip=True) if job_details_page.find("span", id="price") else "Salary not found"
-                    #location_city by id
                     job_location = job_details_page.find("span", id="location_city").get_text(strip=True) if job_details_page.find("span", id="location_city") else "not found"
                     phone_number = job_details_page.find("span", id="phone_number").get_text(strip=True) if job_details_page.find("span", id="phone_number") else None
-                    source = "Jobzz.ro"
                     company_name = job_details_page.find("div", class_="account_right").get_text(strip=True) if job_details_page.find("div", class_="account_right") else "not found"
                     category_name = Category.objects.get(slug=category_slug).name
                     job_posting_date = job_details_page.find("div", class_="info_extra_details").get_text(strip=True) if job_details_page.find("div", class_="info_extra_details") else "Date not found"
                     job_type = job_details_page.find("span", id="job_type").get_text(strip=True) if job_details_page.find("span", id="job_type") else None
                     job_description = job_details_page.find("p", id="paragraph").get_text(separator=" ", strip=True) if job_details_page.find("p", id="paragraph") else "Description not found"
+
                     if not Job.objects.filter(position=job_title, company=company_name, location=job_location, job_type=job_type).exists():
                         scraped_data = Job(
                             position=job_title, 
@@ -209,33 +206,30 @@ def scrape_job_details(url, max_pages, category_slug, request):
                             description=job_description, 
                             job_posted=job_posting_date, 
                             job_link=job_details_url, 
-                            source=source, 
+                            source="Jobzz.ro", 
                             job_category=category_name, 
                             user=request.user, 
-                            phone_number=phone_number)
+                            phone_number=phone_number
+                        )
                         scraped_data.save()
                         total_stored += 1
                     else:
                         total_skipped_jobs += 1
-                data = {
-                    "is_success": True,
-                    'url': url,
-                    'total_jobs_found': total_jobs_found,
-                    'total_stored': total_stored,
-                    'total_skipped_jobs': total_skipped_jobs
-                }
+
+            data.update({
+                "is_success": True,
+                'total_jobs_found': total_jobs_found,
+                'total_stored': total_stored,
+                'total_skipped_jobs': total_skipped_jobs
+            })
             return data
         except Exception as e:
             print(f"An error occurred: {e}")
         finally:
             try:
                 driver.quit()
-            except WebDriverException as e:
-                print(f"WebDriverException: {e}")
-            except PermissionError as e:
-                print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
             except Exception as e:
-                print(f"An unexpected error occurred while quitting the driver: {e}")
+                print(f"An error occurred while quitting the driver: {e}")
     if base_url == "https://www.posao.hr/djelatnosti/":
         total_stored = 0
         total_skipped_jobs = 0
