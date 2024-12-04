@@ -1,5 +1,3 @@
-import io
-from tkinter import Image
 from bs4 import BeautifulSoup
 from requests import request
 from django.shortcuts import get_object_or_404
@@ -720,6 +718,26 @@ def scrape_job_details(url, max_pages, category_slug, request):
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
         return data
+    if base_url == "https://burzarada.hzz.hr/Posloprimac_RadnaMjesta.aspx":
+        total_stored = 0
+        total_skipped_jobs = 0
+        total_jobs_found = 0
+        data = {
+            "is_success": False,
+            'url': base_url,
+            'category_slug': category_slug,
+        }
+        try:
+            for page_number in range(1, max_pages + 1):
+                if page_number == 1:
+                    url = f"{base_url}?kategorija={category_slug}"
+                else:
+                    url = f"{base_url}?kategorija={category_slug}/page:{page_number}/"
+                driver.get(url)
+                page_source = BeautifulSoup(driver.page_source, features="html.parser")
+                
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 @login_required(login_url='login')
 def scrape_job(request):
