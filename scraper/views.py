@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 from requests import request
 from django.shortcuts import get_object_or_404
+import requests
 from .models import AvilableUrl, Job, Category
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -26,10 +27,10 @@ def scrape_job_details(url, max_pages, category_slug, request):
     category_slug = category_slug.strip()
     category_name = Category.objects.get(slug=category_slug).name
     chrome_options = Options()
-    chrome_options.add_argument('--no-sandbox')
+    # chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--disable-gpu')
+    # chrome_options.add_argument('--headless')
+    # chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--remote-debugging-port=9222')
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -722,26 +723,59 @@ def scrape_job_details(url, max_pages, category_slug, request):
         total_stored = 0
         total_skipped_jobs = 0
         total_jobs_found = 0
+        category_href = "javascript:__doPostBack('ctl00$MainContent$DataList1$ctl03$lnkKategorija','')"
         data = {
             "is_success": False,
             'url': base_url,
             'category_slug': category_slug,
         }
         try:
-            for page_number in range(1, max_pages + 1):
-                if page_number == 1:
-                    url = f"{base_url}?kategorija={category_slug}"
-                else:
-                    url = f"{base_url}?kategorija={category_slug}/page:{page_number}/"
-                driver.get(url)
-                page_source = BeautifulSoup(driver.page_source, features="html.parser")
-                
+            session = requests.Session()
+            response = session.get(base_url)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, "html.parser")
+            viewstate = soup.find("input", {"name": "__VIEWSTATE"})["value"]
+            eventvalidation = soup.find("input", {"name": "__EVENTVALIDATION"})["value"]
+            post_data = {
+                "__EVENTTARGET": "ctl00$MainContent$DataList1$ctl03$lnkKategorija",
+                "__EVENTARGUMENT": "",
+                "__LASTFOCUS": "",
+                "__VIEWSTATE": viewstate,
+                "__VIEWSTATEGENERATOR": "A3A0D61B",
+                "__EVENTVALIDATION": eventvalidation,
+                "ctl00$MainContent$DataList1$ctl03$lnkKategorija": category_href
+            }
+            post_response = session.post(base_url, data=post_data)
+            post_response.raise_for_status()
+            job_soup = BeautifulSoup(post_response.content, "html.parser")
+            jobs = job_soup.find_all("div", class_="prInfobox")
+            
+            for job in jobs:
+                try:
+                    title = job.find("a", class_="TitleLink").text.strip()
+                    location = job.find("span", {"id": lambda x: x and "MjeNazivLabel" in x}).text.strip()
+                    employer = job.find("span", {"id": lambda x: x and "PosNazivLabel" in x}).text.strip()
+                    deadline = job.find("span", {"id": lambda x: x and "RadMjeRokPrijaveLabel" in x}).text.strip()
+
+                    # Store the job data
+                    data["jobs"].append({
+                        "title": title,
+                        "location": location,
+                        "employer": employer,
+                        "deadline": deadline,
+                    })
+                    total_stored += 1
+                except AttributeError:
+                    total_skipped_jobs += 1
+                    continue
+
         except Exception as e:
             print(f"An error occurred: {e}")
 
 @login_required(login_url='login')
 def scrape_job(request):
-    urls = AvilableUrl.objects.all()  
+    requested_user = request.user
+    urls = AvilableUrl.objects.filter(user=requested_user)  
     selected_url = None 
     categories = Category.objects.none()  
     max_pages = None
