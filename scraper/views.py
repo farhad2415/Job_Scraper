@@ -775,7 +775,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
 @login_required(login_url='login')
 def scrape_job(request):
     requested_user = request.user
-    urls = AvilableUrl.objects.filter(user=requested_user)  
+    urls = AvilableUrl.objects.filter(users=requested_user)  
     selected_url = None 
     categories = Category.objects.none()  
     max_pages = None
