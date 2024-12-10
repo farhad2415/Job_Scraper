@@ -27,10 +27,10 @@ def scrape_job_details(url, max_pages, category_slug, request):
     category_slug = category_slug.strip()
     category_name = Category.objects.get(slug=category_slug).name
     chrome_options = Options()
-    chrome_options.add_argument('--no-sandbox')
+    # chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
-    chrome_options.add_argument('--headless')
-    chrome_options.add_argument('--disable-gpu')
+    # chrome_options.add_argument('--headless')
+    # chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--remote-debugging-port=9222')
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -99,7 +99,6 @@ def scrape_job_details(url, max_pages, category_slug, request):
                             )
                             WebDriverWait(driver, 10).until(
                                     lambda driver: phone_number_element.value_of_css_property("background-image") != 'none')
-        
                             phone_number_image = phone_number_element.screenshot_as_png
                             reader = easyocr.Reader(['en'])
                             phone_number = reader.readtext(phone_number_image)
@@ -719,63 +718,116 @@ def scrape_job_details(url, max_pages, category_slug, request):
             except Exception as e:
                 print(f"An unexpected error occurred while quitting the driver: {e}")
         return data
-    if base_url == "https://burzarada.hzz.hr/Posloprimac_RadnaMjesta.aspx":
+    if base_url == "https://www.halooglasi.com/posao/":
         total_stored = 0
         total_skipped_jobs = 0
         total_jobs_found = 0
-        category_href = "javascript:__doPostBack('ctl00$MainContent$DataList1$ctl03$lnkKategorija','')"
         data = {
             "is_success": False,
             'url': base_url,
             'category_slug': category_slug,
         }
         try:
-            session = requests.Session()
-            response = session.get(base_url)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.content, "html.parser")
-            viewstate = soup.find("input", {"name": "__VIEWSTATE"})["value"]
-            eventvalidation = soup.find("input", {"name": "__EVENTVALIDATION"})["value"]
-            post_data = {
-                "__EVENTTARGET": "ctl00$MainContent$DataList1$ctl03$lnkKategorija",
-                "__EVENTARGUMENT": "",
-                "__LASTFOCUS": "",
-                "__VIEWSTATE": viewstate,
-                "__VIEWSTATEGENERATOR": "A3A0D61B",
-                "__EVENTVALIDATION": eventvalidation,
-                "ctl00$MainContent$DataList1$ctl03$lnkKategorija": category_href
-            }
-            post_response = session.post(base_url, data=post_data)
-            post_response.raise_for_status()
-            job_soup = BeautifulSoup(post_response.content, "html.parser")
-            jobs = job_soup.find_all("div", class_="prInfobox")
-            
-            for job in jobs:
-                try:
-                    title = job.find("a", class_="TitleLink").text.strip()
-                    location = job.find("span", {"id": lambda x: x and "MjeNazivLabel" in x}).text.strip()
-                    employer = job.find("span", {"id": lambda x: x and "PosNazivLabel" in x}).text.strip()
-                    deadline = job.find("span", {"id": lambda x: x and "RadMjeRokPrijaveLabel" in x}).text.strip()
+            for page_number in range(1, max_pages + 1):
+                if page_number == 1:
+                    url = f"{base_url}{category_slug}"
+                else:
+                    url = f"{base_url}{category_slug}?page={page_number}"
+                driver.get(url)
+                page_source = BeautifulSoup(driver.page_source, features="html.parser")
+                job_grid_elements = page_source.find_all("div", class_='col-md-12 col-sm-12 col-xs-12 col-lg-12')
+                if not job_grid_elements:
+                    print(f"No job elements found on page {page_number}.")
+                    break
+                for job_element in job_grid_elements:
+                    job_title = job_element.find("h3", class_="courses-title").get_text(strip=True) if job_element.find("h3", class_="courses-title") else "not found"
+                    job_link_id = job_element.find("a", href=True)['href']
+                    job_link = f"https://www.halooglasi.com{job_link_id}"
 
-                    # Store the job data
-                    data["jobs"].append({
-                        "title": title,
-                        "location": location,
-                        "employer": employer,
-                        "deadline": deadline,
-                    })
-                    total_stored += 1
-                except AttributeError:
-                    total_skipped_jobs += 1
-                    continue
+                    # Make an Click Event for show show-phone-span find the phone-div and click it
 
+                    driver.get(job_link)
+                    try:
+                        show_phone_button = WebDriverWait(driver, 10).until(
+                        EC.element_to_be_clickable((By.CLASS_NAME, "show-phone-span"))
+                        )
+                        show_phone_button.click()
+                        time.sleep(2)
+                    except Exception as e:
+                        print("Show phone button not found.")
+                    job_page_source = BeautifulSoup(driver.page_source, features="html.parser")
+                    right_job_details = job_page_source.find("div", class_="col-md-12")
+                    left_job_details = job_page_source.find("div", class_="sidebar-info-box")
+                    company_name = right_job_details.find("div", id="plh20").get_text(strip=True) if right_job_details.find("div", id="plh20") else "not found"
+                    position_name = job_title  
+                    category_name = Category.objects.get(slug=category_slug).name
+                    job_posting_date = left_job_details.find("strong", id="plh42").get_text(strip=True) if left_job_details.find("strong", id="plh42") else "not found"
+                    salary_element = right_job_details.find("table", class_="employers-demands")
+                    if salary_element:
+                        salary = salary_element.find("span", id="plh10").get_text(strip=True) if salary_element.find("span", id="plh10") else "not found"
+                    job_type = right_job_details.find("span", id="plh6").get_text(strip=True) if right_job_details.find("span", id="plh6") else "not found"
+                    phone_number_element = right_job_details.find("div", class_="contact-info")
+                    if phone_number_element:
+                        phone_number_td = phone_number_element.find("td", id="plh24")
+                        if phone_number_td:
+                            phone_number_link = phone_number_td.find("a", class_="phone-number-link")
+                            phone_number = phone_number_link.get_text(strip=True) if phone_number_link else "not found"
+                        else:
+                            phone_number = "not found"
+                    else:
+                        phone_number = "not found"
+                    job_link = job_link
+                    job_description_div = right_job_details.find("div", id="divAdditionalDescriptionGroup")
+                    if job_description_div:
+                        job_description = job_description_div.find("span", id="plh14").get_text(strip=True, separator=" ") if job_description_div.find("span", id="plh14") else "not found"
+                    else:
+                        job_description = "not found"
+                    website_link = None
+                    source = "HaloOglasi.com"
+                    if not Job.objects.filter(position=position_name, company=company_name, user=request.user).exists():
+                        scraped_data = Job(
+                            position=position_name, 
+                            company=company_name, 
+                            location="not found", 
+                            description=job_description, 
+                            job_posted=job_posting_date, 
+                            job_link=job_link, 
+                            source=source, 
+                            job_category=category_name, 
+                            user=request.user, 
+                            phone_number=phone_number, 
+                            salary=salary, 
+                            website=website_link
+                            )
+                        scraped_data.save()
+                        total_stored += 1
+                        print(f"Job stored: {position_name}")
+                    else:
+                        total_skipped_jobs += 1
+                data = {
+                    "is_success": True,
+                    'url': url,
+                    'total_jobs_found': total_jobs_found,
+                    'total_stored': total_stored,
+                    'total_skipped_jobs': total_skipped_jobs
+                }
         except Exception as e:
             print(f"An error occurred: {e}")
+        finally:
+            try:
+                driver.quit()
+            except WebDriverException as e:
+                print(f"WebDriverException: {e}")
+            except PermissionError as e:
+                print(f"PermissionError: {e}. Unable to terminate the WebDriver process.")
+            except Exception as e:
+                print(f"An unexpected error occurred while quitting the driver: {e}")
+        return data        
 
 @login_required(login_url='login')
 def scrape_job(request):
     requested_user = request.user
-    urls = AvilableUrl.objects.filter(users=requested_user)  
+    urls = AvilableUrl.objects.filter(user=requested_user)
     selected_url = None 
     categories = Category.objects.none()  
     max_pages = None
