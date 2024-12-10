@@ -740,6 +740,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
                     print(f"No job elements found on page {page_number}.")
                     break
                 for job_element in job_grid_elements:
+                    total_jobs_found += 1
                     job_title = job_element.find("h3", class_="courses-title").get_text(strip=True) if job_element.find("h3", class_="courses-title") else "not found"
                     job_link_id = job_element.find("a", href=True)['href']
                     job_link = f"https://www.halooglasi.com{job_link_id}"
@@ -762,10 +763,11 @@ def scrape_job_details(url, max_pages, category_slug, request):
                     position_name = job_title  
                     category_name = Category.objects.get(slug=category_slug).name
                     job_posting_date = left_job_details.find("strong", id="plh42").get_text(strip=True) if left_job_details.find("strong", id="plh42") else "not found"
-                    salary_element = right_job_details.find("table", class_="employers-demands")
-                    if salary_element:
-                        salary = salary_element.find("span", id="plh10").get_text(strip=True) if salary_element.find("span", id="plh10") else "not found"
-                    job_type = right_job_details.find("span", id="plh6").get_text(strip=True) if right_job_details.find("span", id="plh6") else "not found"
+                    employers_demands = right_job_details.find("table", class_="employers-demands")
+                    if employers_demands:
+                        salary = employers_demands.find(text=re.compile(r'Plata')).find_next('span').get_text(strip=True) if employers_demands.find(text=re.compile(r'Plata')) else "not found"
+                        job_location = employers_demands.find(text=re.compile(r'Grad')).find_next('span').get_text(strip=True) if employers_demands.find(text=re.compile(r'Grad')) else "not found"
+                        job_type = employers_demands.find(text=re.compile(r'Radno vreme')).find_next('span').get_text(strip=True) if employers_demands.find(text=re.compile(r'Radno vreme')) else "not found"
                     phone_number_element = right_job_details.find("div", class_="contact-info")
                     if phone_number_element:
                         phone_number_td = phone_number_element.find("td", id="plh24")
@@ -788,11 +790,12 @@ def scrape_job_details(url, max_pages, category_slug, request):
                         scraped_data = Job(
                             position=position_name, 
                             company=company_name, 
-                            location="not found", 
+                            location=job_location,
                             description=job_description, 
                             job_posted=job_posting_date, 
                             job_link=job_link, 
                             source=source, 
+                            job_type=job_type,
                             job_category=category_name, 
                             user=request.user, 
                             phone_number=phone_number, 
@@ -827,7 +830,7 @@ def scrape_job_details(url, max_pages, category_slug, request):
 @login_required(login_url='login')
 def scrape_job(request):
     requested_user = request.user
-    urls = AvilableUrl.objects.filter(user=requested_user)
+    urls = AvilableUrl.objects.filter(users=requested_user)
     selected_url = None 
     categories = Category.objects.none()  
     max_pages = None
