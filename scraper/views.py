@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 from requests import request
 from django.shortcuts import get_object_or_404
 import requests
-from .models import AvilableUrl, Job, Category
+from .models import AvilableUrl, Job, Category, Notice
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.contrib import messages
@@ -835,6 +835,7 @@ def scrape_job(request):
     categories = Category.objects.none()  
     max_pages = None
     category_slug = None
+    notices = Notice.objects.filter(is_active=True)
 
     if request.method == 'POST':
         url_id = request.POST.get('url') 
@@ -862,7 +863,7 @@ def scrape_job(request):
             except Exception as e:
                 return JsonResponse({'is_success': False, 'error': str(e)})
 
-    return render(request, 'store_job.html', {'urls': urls, 'selected_url': selected_url, 'categories': categories, 'max_pages': max_pages, 'category_slug': category_slug})
+    return render(request, 'store_job.html', {'urls': urls, 'selected_url': selected_url, 'categories': categories, 'max_pages': max_pages, 'category_slug': category_slug, 'notices': notices})
 
 @login_required(login_url='login')  
 def view_scraped_data(request):
@@ -946,3 +947,4 @@ def confirm_delete_jobs(request):
         else:
             return redirect('view_scraped_data')
     return render(request, 'confirm_delete_job.html', {'job_count': job_count})
+

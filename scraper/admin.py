@@ -1,16 +1,21 @@
 from django.contrib import admin
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
-from import_export.widgets import ForeignKeyWidget
+
 
 # Register your models here.
-from .models import AvilableUrl, Job, Category, SubCategory
+from .models import AvilableUrl, Job, Category, SubCategory, Notice
 
 admin.site.register(AvilableUrl)
 admin.site.register(Category)
 admin.site.register(SubCategory)
 
+class NoticeViewAdmin(admin.ModelAdmin):
+    list_display = ('title', 'description', 'is_active')
+    search_fields = ('title', 'description', 'is_active')
+    list_filter = ('title', 'description', 'is_active')
 
+admin.site.register(Notice, NoticeViewAdmin)
 
 class JobResource(resources.ModelResource):
     class Meta:

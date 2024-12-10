@@ -4,9 +4,26 @@
 
 {% block searchcontent %}
 <div class="container mt-5">
-    <h2>Select a URL to Scrape</h2>
-    <h2>My name is {{ request.user }}</h2>
 
+        <h2>Notice Board</h2>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Notice Title</th>
+                    <th>Short Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for notice in notices %}
+                <tr>
+                    <td>{{ notice.title }}</td>
+                    <td>{{ notice.description }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    
     <form id="scrapeForm" method="POST" action="{% url 'start_scraping' %}">
         {% csrf_token %}
         <div class="form-group">
@@ -34,7 +51,7 @@
                         <option value="40">40</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-4">
                     <label for="category">Category</label>
                     <select required class="form-control" id="category" name="category">
                         <option value="">-----</option>
