@@ -832,7 +832,7 @@ def scrape_job(request):
     requested_user = request.user
     urls = AvilableUrl.objects.filter(users=requested_user)
     selected_url = None 
-    categories = Category.objects.none()  
+    categories = Category.objects.none
     max_pages = None
     category_slug = None
     notices = Notice.objects.filter(is_active=True)
@@ -843,7 +843,7 @@ def scrape_job(request):
         category_slug = request.POST.get('category') 
         if url_id:
             selected_url = get_object_or_404(AvilableUrl, id=url_id)
-            categories = selected_url.category.all()
+            categories = selected_url.category.filter(users=requested_user)
         if max_pages and category_slug and selected_url:
             try:
                 max_pages = int(max_pages)  

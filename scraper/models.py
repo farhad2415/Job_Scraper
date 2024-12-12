@@ -10,9 +10,14 @@ class SubCategory(models.Model):
 class Category(models.Model):
     name = models.CharField(max_length=255)
     slug = models.CharField(max_length=500, blank=True, null=True)
-    sub_category = models.ForeignKey('SubCategory', on_delete=models.CASCADE, blank=True, null=True)
+
+    users = models.ManyToManyField('auth.User', blank=True)
     def __str__(self):
-        return self.name  
+        avilable_url_names = ', '.join(
+            avilable_url.name or ''  
+            for avilable_url in AvilableUrl.objects.filter(category=self)
+        )
+        return f"{self.name} ({avilable_url_names})" if avilable_url_names else self.name
 
 class AvilableUrl(models.Model):
     url = models.URLField(max_length=200)
