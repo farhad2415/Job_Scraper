@@ -896,7 +896,7 @@ def update_salary(request, job_id):
         job.save()
         messages.success(request, "Salary updated successfully!") 
         return redirect(request.META['HTTP_REFERER'])
-# 
+
 @login_required(login_url='login')
 def home(request):
     return render(request, 'home.html')
